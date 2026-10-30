@@ -35,10 +35,12 @@ def add_documents(chunks: list[dict], embeddings: list[list[float]], replace_exi
     Store document chunks and embeddings in ChromaDB idempotently.
 
     Each chunk dict must have:
-      - 'source': str (e.g. 'VITAP_Public_Self_Disclosure.pdf')
+      - 'source': str (e.g. 'VITAP_Public_Self_Disclosure.pdf' or doc_id)
       - 'page': int
       - 'text': str
       - optional 'category': str
+      - optional 'title': str
+      - optional 'doc_id': str
       - optional 'chunk_index': int (index within page or document)
 
     Args:
@@ -66,13 +68,15 @@ def add_documents(chunks: list[dict], embeddings: list[list[float]], replace_exi
     documents = []
     metadatas = []
 
-    # Track chunk index per page for stable deterministic IDs
+    # Track chunk index per (source, page) for stable deterministic IDs
     page_chunk_counters: dict[tuple[str, int], int] = {}
 
     for i, chunk in enumerate(chunks):
-        source = chunk.get("source", "unknown_source")
+        source = str(chunk.get("source", "unknown_source"))
         page = int(chunk.get("page", 1))
-        category = chunk.get("category", "General")
+        category = str(chunk.get("category", "Other"))
+        doc_title = str(chunk.get("title", source))
+        doc_id = str(chunk.get("doc_id", source))
         
         counter_key = (source, page)
         chunk_idx = chunk.get("chunk_index")
@@ -89,6 +93,8 @@ def add_documents(chunks: list[dict], embeddings: list[list[float]], replace_exi
             "source": source,
             "page": page,
             "category": category,
+            "title": doc_title,
+            "doc_id": doc_id,
             "chunk_index": int(chunk_idx)
         })
 
@@ -110,14 +116,20 @@ def add_documents(chunks: list[dict], embeddings: list[list[float]], replace_exi
 
 def delete_document(source: str) -> int:
     """
-    Remove all chunks corresponding to a specific document source.
+    Remove all chunks corresponding to a specific document source or doc_id.
     """
     try:
+        # Check by source or doc_id
         existing = collection.get(where={"source": source})
-        count = len(existing.get("ids", []))
+        ids_to_delete = existing.get("ids", [])
+        if not ids_to_delete:
+            existing_doc = collection.get(where={"doc_id": source})
+            ids_to_delete = existing_doc.get("ids", [])
+
+        count = len(ids_to_delete)
         if count > 0:
-            collection.delete(where={"source": source})
-            logger.info(f"Deleted {count} chunks for source: {source}")
+            collection.delete(ids=ids_to_delete)
+            logger.info(f"Deleted {count} chunks for document: {source}")
         return count
     except Exception as e:
         logger.error(f"Error deleting document {source}: {e}")

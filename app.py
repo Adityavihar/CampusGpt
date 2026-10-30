@@ -1,7 +1,7 @@
 import os
 import logging
 from pathlib import Path
-from flask import Flask, jsonify, request, render_template, session
+from flask import Flask, jsonify, request, render_template, session, redirect, url_for
 from werkzeug.utils import secure_filename
 from dotenv import load_dotenv
 
@@ -14,13 +14,32 @@ logging.basicConfig(
 )
 logger = logging.getLogger("campusgpt")
 
+from services.auth import (
+    is_admin_authenticated,
+    admin_required,
+    admin_api_required,
+    verify_admin_password,
+    login_admin_session,
+    logout_admin_session
+)
 from services.embeddings import get_embeddings
 from services.document_parser import extract_text_from_pdf
 from services.chunking import chunk_text
-from services.vector_store import add_documents, get_collection_stats
+from services.vector_store import add_documents, get_collection_stats, delete_document
 from services.retriever import retrieve_documents, retrieve_formatted_chunks
 from services.llm import generate_answer
-from services.ingestion_service import index_single_pdf, index_all_documents, load_catalog
+from services.ingestion_service import (
+    STANDARD_CATEGORIES,
+    index_single_pdf,
+    index_all_documents,
+    index_uploaded_file,
+    index_webpage,
+    reindex_document,
+    delete_document_from_kb,
+    list_catalog_documents,
+    load_catalog
+)
+from services.content_extractor import fetch_and_extract_webpage, is_safe_url
 from services.attendance_service import process_attendance_file, parse_attendance_text
 
 app = Flask(__name__)
@@ -29,19 +48,32 @@ app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "campusgpt-secure-session-key-vitap")
 
 # Upload configurations
+DOCUMENTS_DIR = Path("data/documents")
 UPLOAD_FOLDER = Path("data/uploads")
+DOCUMENTS_DIR.mkdir(parents=True, exist_ok=True)
 UPLOAD_FOLDER.mkdir(parents=True, exist_ok=True)
+
 app.config["UPLOAD_FOLDER"] = str(UPLOAD_FOLDER)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB max upload limit
-ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".txt"}
+ALLOWED_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".txt", ".md", ".docx"}
 
 
 def allowed_file(filename: str) -> bool:
     return Path(filename).suffix.lower() in ALLOWED_EXTENSIONS
 
 
+def is_safe_document_path(path_str: str) -> bool:
+    """Ensure path stays strictly within data/documents to prevent directory traversal."""
+    try:
+        resolved = Path(path_str).resolve()
+        base_resolved = DOCUMENTS_DIR.resolve()
+        return base_resolved in resolved.parents or resolved == base_resolved
+    except Exception:
+        return False
+
+
 # =========================================================
-# HOME PAGE
+# STUDENT HOME & CHAT PAGE
 # =========================================================
 
 @app.route("/")
@@ -50,7 +82,253 @@ def home():
 
 
 # =========================================================
-# HEALTH & STATUS
+# ADMIN AUTHENTICATION ROUTES
+# =========================================================
+
+@app.route("/admin/login", methods=["GET", "POST"])
+def admin_login_page():
+    if request.method == "POST":
+        data = request.get_json(silent=True) or request.form
+        password = data.get("password", "")
+        if verify_admin_password(password):
+            login_admin_session()
+            if request.is_json or request.headers.get("Accept") == "application/json":
+                return jsonify({"success": True, "message": "Authenticated successfully."})
+            return redirect(url_for("admin_knowledge_base_page"))
+        if request.is_json or request.headers.get("Accept") == "application/json":
+            return jsonify({"success": False, "message": "Invalid administrator password."}), 401
+        return render_template("admin_login.html", error="Invalid administrator password."), 401
+
+    if is_admin_authenticated():
+        return redirect(url_for("admin_knowledge_base_page"))
+    return render_template("admin_login.html")
+
+
+@app.route("/admin/logout", methods=["POST", "GET"])
+def admin_logout():
+    logout_admin_session()
+    if request.is_json or request.headers.get("Accept") == "application/json":
+        return jsonify({"success": True, "message": "Logged out successfully."})
+    return redirect(url_for("admin_login_page"))
+
+
+# =========================================================
+# ADMIN KNOWLEDGE MANAGER PAGE & ENDPOINTS
+# =========================================================
+
+@app.route("/admin/knowledge-base")
+@admin_required
+def admin_knowledge_base_page():
+    return render_template("admin_knowledge_base.html", categories=STANDARD_CATEGORIES)
+
+
+@app.route("/api/admin/stats")
+@admin_api_required
+def admin_stats():
+    stats = get_collection_stats()
+    catalog = load_catalog()
+    docs = catalog.get("documents", {})
+    categories = {d.get("category") for d in docs.values() if d.get("category")}
+    return jsonify({
+        "success": True,
+        "stats": {
+            "total_documents": len(docs),
+            "total_chunks": stats.get("total_chunks", 0),
+            "total_categories": len(categories),
+            "collection_status": "Healthy (HNSW Cosine)"
+        }
+    })
+
+
+@app.route("/api/admin/documents")
+@admin_api_required
+def admin_list_documents():
+    category = request.args.get("category")
+    status = request.args.get("status")
+    search_q = request.args.get("search")
+
+    docs = list_catalog_documents(
+        category_filter=category,
+        status_filter=status,
+        search_query=search_q
+    )
+    return jsonify({
+        "success": True,
+        "count": len(docs),
+        "documents": docs
+    })
+
+
+@app.route("/api/admin/upload", methods=["POST"])
+@admin_api_required
+def admin_upload_document():
+    if "file" not in request.files:
+        return jsonify({"success": False, "error": "No file part in request."}), 400
+
+    file = request.files["file"]
+    if not file or file.filename == "":
+        return jsonify({"success": False, "error": "No file selected."}), 400
+
+    orig_name = secure_filename(file.filename)
+    if not allowed_file(orig_name):
+        return jsonify({
+            "success": False,
+            "error": "Invalid file type. Allowed: .pdf, .txt, .md, .docx"
+        }), 400
+
+    title = request.form.get("title")
+    category = request.form.get("category", "").strip()
+    if not category:
+        return jsonify({"success": False, "error": "Category parameter is required."}), 400
+
+    publisher = request.form.get("publisher")
+    pub_date = request.form.get("publication_date")
+    eff_date = request.form.get("effective_date")
+    source_url = request.form.get("source_url")
+    doc_id_to_replace = request.form.get("doc_id_to_replace")
+    force = request.form.get("force", "false").lower() in ("true", "1")
+
+    file_bytes = file.read()
+    if not file_bytes:
+        return jsonify({"success": False, "error": "Uploaded file is empty."}), 400
+
+    result = index_uploaded_file(
+        file_bytes=file_bytes,
+        original_filename=orig_name,
+        title=title,
+        category=category,
+        publisher=publisher,
+        publication_date=pub_date,
+        effective_date=eff_date,
+        source_url=source_url,
+        doc_id_to_replace=doc_id_to_replace,
+        force=force
+    )
+
+    status_code = 200 if result.get("success") or result.get("is_duplicate") else 500
+    return jsonify(result), status_code
+
+
+@app.route("/api/admin/webpage/preview", methods=["POST"])
+@admin_api_required
+def admin_preview_webpage():
+    data = request.get_json(silent=True) or {}
+    url = data.get("url", "").strip()
+    if not url:
+        return jsonify({"success": False, "error": "Missing 'url' parameter."}), 400
+
+    safe, msg = is_safe_url(url)
+    if not safe:
+        return jsonify({"success": False, "error": f"SSRF Protection: {msg}"}), 400
+
+    try:
+        extracted = fetch_and_extract_webpage(url)
+        # Show first 800 characters as preview snippet
+        snippet = extracted["text"][:800] + ("..." if len(extracted["text"]) > 800 else "")
+        return jsonify({
+            "success": True,
+            "preview": {
+                "title": extracted["title"],
+                "description": extracted.get("description", ""),
+                "text": snippet,
+                "total_chars": len(extracted["text"])
+            }
+        })
+    except Exception as e:
+        logger.exception("Webpage preview error")
+        return jsonify({"success": False, "error": str(e)}), 400
+
+
+@app.route("/api/admin/webpage/index", methods=["POST"])
+@admin_api_required
+def admin_index_webpage():
+    data = request.get_json(silent=True) or {}
+    url = data.get("url", "").strip()
+    category = data.get("category", "").strip()
+    title = data.get("title")
+    publisher = data.get("publisher")
+    pub_date = data.get("publication_date")
+    eff_date = data.get("effective_date")
+    doc_id_to_replace = data.get("doc_id_to_replace")
+    force = bool(data.get("force", False))
+
+    if not url:
+        return jsonify({"success": False, "error": "URL parameter is required."}), 400
+    if not category:
+        return jsonify({"success": False, "error": "Category parameter is required."}), 400
+
+    result = index_webpage(
+        url=url,
+        title=title,
+        category=category,
+        publisher=publisher,
+        publication_date=pub_date,
+        effective_date=eff_date,
+        doc_id_to_replace=doc_id_to_replace,
+        force=force
+    )
+
+    status_code = 200 if result.get("success") or result.get("is_duplicate") else 500
+    return jsonify(result), status_code
+
+
+@app.route("/api/admin/document/reindex", methods=["POST"])
+@admin_api_required
+def admin_reindex():
+    data = request.get_json(silent=True) or {}
+    doc_id = data.get("doc_id")
+    if not doc_id:
+        return jsonify({"success": False, "error": "Missing 'doc_id' parameter."}), 400
+
+    result = reindex_document(doc_id)
+    status_code = 200 if result.get("success") else 500
+    return jsonify(result), status_code
+
+
+@app.route("/api/admin/document/<path:doc_id>", methods=["DELETE"])
+@admin_api_required
+def admin_delete_document(doc_id):
+    if not doc_id:
+        return jsonify({"success": False, "error": "Invalid document ID."}), 400
+
+    result = delete_document_from_kb(doc_id)
+    if not result.get("success"):
+        if "not found in catalog" in result.get("error", "").lower():
+            return jsonify(result), 404
+        return jsonify(result), 500
+    return jsonify(result), 200
+
+
+@app.route("/api/admin/test-retrieval", methods=["POST"])
+@admin_api_required
+def admin_test_retrieval():
+    data = request.get_json(silent=True) or {}
+    query = data.get("query", "").strip()
+    category = data.get("category")
+    top_k = min(int(data.get("top_k", 5)), 20)
+
+    if not query:
+        return jsonify({"success": False, "error": "Query cannot be empty."}), 400
+
+    try:
+        results = retrieve_formatted_chunks(
+            query=query,
+            n_results=top_k,
+            category=category if category and category != "all" else None
+        )
+        return jsonify({
+            "success": True,
+            "query": query,
+            "count": len(results),
+            "results": results
+        })
+    except Exception as e:
+        logger.exception("Admin test retrieval error")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+# =========================================================
+# PUBLIC SYSTEM HEALTH & CATALOG
 # =========================================================
 
 @app.route("/api/health")
@@ -60,15 +338,11 @@ def health():
     return jsonify({
         "status": "healthy",
         "service": "CampusGPT API",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "vector_store": stats,
         "catalog_documents_count": len(catalog.get("documents", {}))
     })
 
-
-# =========================================================
-# DOCUMENT CATALOG & LISTING
-# =========================================================
 
 @app.route("/api/documents")
 def list_documents():
@@ -82,19 +356,22 @@ def list_documents():
 
 
 # =========================================================
-# TEST PDF (BACKWARD COMPATIBLE)
+# DIAGNOSTIC ENDPOINTS (PROTECTED & PATH-VALIDATED)
 # =========================================================
 
 @app.route("/api/test-pdf")
+@admin_api_required
 def test_pdf():
-    pdf_path = request.args.get("file", "data/documents/VITAP_Public_Self_Disclosure.pdf")
-    if not os.path.exists(pdf_path):
-        return jsonify({"error": f"File not found: {pdf_path}"}), 404
+    pdf_param = request.args.get("file", "VITAP_Public_Self_Disclosure.pdf")
+    pdf_path = (DOCUMENTS_DIR / Path(pdf_param).name).resolve()
+
+    if not pdf_path.exists():
+        return jsonify({"error": f"File not found: {pdf_path.name}"}), 404
 
     try:
-        pages = extract_text_from_pdf(pdf_path)
+        pages = extract_text_from_pdf(str(pdf_path))
         return jsonify({
-            "file": Path(pdf_path).name,
+            "file": pdf_path.name,
             "total_pages": len(pages),
             "first_page": pages[0] if pages else None
         })
@@ -103,24 +380,23 @@ def test_pdf():
         return jsonify({"error": str(e)}), 500
 
 
-# =========================================================
-# TEST CHUNKS (BACKWARD COMPATIBLE)
-# =========================================================
-
 @app.route("/api/test-chunks")
+@admin_api_required
 def test_chunks():
-    pdf_path = request.args.get("file", "data/documents/VITAP_Public_Self_Disclosure.pdf")
-    if not os.path.exists(pdf_path):
-        return jsonify({"error": f"File not found: {pdf_path}"}), 404
+    pdf_param = request.args.get("file", "VITAP_Public_Self_Disclosure.pdf")
+    pdf_path = (DOCUMENTS_DIR / Path(pdf_param).name).resolve()
+
+    if not pdf_path.exists():
+        return jsonify({"error": f"File not found: {pdf_path.name}"}), 404
 
     try:
-        pages = extract_text_from_pdf(pdf_path)
+        pages = extract_text_from_pdf(str(pdf_path))
         all_chunks = []
         for page in pages:
             chunks = chunk_text(page["text"])
             for chunk in chunks:
                 all_chunks.append({
-                    "source": Path(pdf_path).name,
+                    "source": pdf_path.name,
                     "page": page["page"],
                     "text": chunk
                 })
@@ -134,18 +410,15 @@ def test_chunks():
         return jsonify({"error": str(e)}), 500
 
 
-# =========================================================
-# TEST EMBEDDING (BACKWARD COMPATIBLE)
-# =========================================================
-
 @app.route("/api/test-embedding")
+@admin_api_required
 def test_embedding():
-    pdf_path = "data/documents/VITAP_Public_Self_Disclosure.pdf"
-    if not os.path.exists(pdf_path):
+    pdf_path = DOCUMENTS_DIR / "VITAP_Public_Self_Disclosure.pdf"
+    if not pdf_path.exists():
         return jsonify({"error": "Default PDF not found"}), 404
 
     try:
-        pages = extract_text_from_pdf(pdf_path)
+        pages = extract_text_from_pdf(str(pdf_path))
         if not pages:
             return jsonify({"error": "No pages found in PDF"}), 500
 
@@ -166,10 +439,11 @@ def test_embedding():
 
 
 # =========================================================
-# INDEX DOCUMENT / INGESTION
+# INDEX DOCUMENT (PROTECTED)
 # =========================================================
 
 @app.route("/api/index-document", methods=["POST"])
+@admin_api_required
 def index_document():
     data = request.get_json(silent=True) or {}
     filename = data.get("filename")
@@ -178,7 +452,6 @@ def index_document():
 
     try:
         if index_all or not filename:
-            # If all=True or no single file requested, index the full documents directory
             result = index_all_documents(force=force)
             return jsonify({
                 "message": "Full document collection ingestion complete",
@@ -186,7 +459,7 @@ def index_document():
             }), 200
         else:
             safe_name = secure_filename(filename)
-            pdf_path = Path("data/documents") / safe_name
+            pdf_path = DOCUMENTS_DIR / safe_name
             if not pdf_path.exists():
                 return jsonify({"error": f"Document not found: {safe_name}"}), 404
 
@@ -205,7 +478,7 @@ def index_document():
 
 
 # =========================================================
-# SEARCH
+# PUBLIC SEARCH
 # =========================================================
 
 @app.route("/api/search")
@@ -236,7 +509,7 @@ def search():
 
 
 # =========================================================
-# CHAT
+# STUDENT CHAT (ENRICHED WITH GENUINE SOURCE METADATA)
 # =========================================================
 
 @app.route("/api/chat", methods=["POST"])
@@ -282,13 +555,17 @@ def chat():
         documents = results.get("documents", [[]])[0]
         metadatas = results.get("metadatas", [[]])[0]
 
+        # Load catalog to enrich sources
+        catalog = load_catalog().get("documents", {})
+
         # 4. Format Document Context
         context_parts = []
         for i, doc in enumerate(documents):
             meta = metadatas[i] if i < len(metadatas) else {}
-            source = meta.get("source", "Unknown Document")
-            page = meta.get("page", "Unknown")
-            context_parts.append(f"Source: {source}\nPage: {page}\nContent:\n{doc}\n")
+            src = meta.get("source", "Unknown Document")
+            page = meta.get("page", 1)
+            doc_title = meta.get("title") or catalog.get(src, {}).get("title", src)
+            context_parts.append(f"Source: {doc_title} (File: {src})\nPage: {page}\nContent:\n{doc}\n")
 
         docs_context = "\n".join(context_parts)
 
@@ -322,18 +599,27 @@ def chat():
         session["chat_history"] = history[-10:]
         session.modified = True
 
-        # 9. Format Deduplicated Sources for UI
+        # 9. Format Deduplicated Genuine Sources for UI
         sources = []
         seen_sources = set()
         for meta in metadatas:
             if not meta:
                 continue
             src = meta.get("source", "Unknown source")
-            page = meta.get("page", "Unknown")
+            page = meta.get("page", 1)
             key = (src, page)
             if key not in seen_sources:
                 seen_sources.add(key)
-                sources.append({"source": src, "page": page})
+                cat_entry = catalog.get(src) or catalog.get(meta.get("doc_id")) or {}
+                sources.append({
+                    "source": src,
+                    "page": page,
+                    "title": meta.get("title") or cat_entry.get("title") or src.replace("_", " ").replace(".pdf", ""),
+                    "source_url": cat_entry.get("source_url") or "https://vitap.ac.in",
+                    "category": meta.get("category") or cat_entry.get("category", "General"),
+                    "publication_date": cat_entry.get("publication_date"),
+                    "effective_date": cat_entry.get("effective_date")
+                })
 
         return jsonify({
             "question": question,

@@ -1,0 +1,1387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Knowledge Manager — CampusGPT</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --primary-light: #eff6ff;
+            --accent: #6366f1;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --danger-light: #fef2f2;
+            --success: #10b981;
+            --success-light: #ecfdf5;
+            --warning: #f59e0b;
+            --warning-light: #fffbeb;
+            --radius-lg: 14px;
+            --radius-md: 8px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 14px rgba(0,0,0,0.07);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* HEADER */
+        header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #2563eb, #6366f1);
+            color: white;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 20px;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.25);
+        }
+
+        .logo-title {
+            font-size: 19px;
+            font-weight: 700;
+            letter-spacing: -0.4px;
+        }
+
+        .logo-title span {
+            color: var(--primary);
+        }
+
+        .badge-admin {
+            background: #e0e7ff;
+            color: #4338ca;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 20px;
+            margin-left: 8px;
+        }
+
+        .header-nav {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .btn-header {
+            padding: 8px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: white;
+            color: var(--text-main);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-header:hover {
+            background: #f1f5f9;
+        }
+
+        .btn-logout {
+            color: var(--danger);
+            border-color: #fecaca;
+        }
+
+        .btn-logout:hover {
+            background: var(--danger-light);
+        }
+
+        /* MAIN CONTAINER */
+        .admin-container {
+            max-width: 1200px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 24px 20px 48px 20px;
+            flex: 1;
+        }
+
+        /* STATS RIBBON */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 16px;
+            margin-bottom: 24px;
+        }
+
+        .stat-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 18px 20px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .stat-value {
+            font-size: 26px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-top: 4px;
+        }
+
+        .stat-sub {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        /* NAVIGATION TABS */
+        .tabs-bar {
+            display: flex;
+            gap: 8px;
+            border-bottom: 2px solid var(--border);
+            margin-bottom: 24px;
+            overflow-x: auto;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 12px 18px;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            margin-bottom: -2px;
+            transition: all 0.2s ease;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .tab-btn:hover {
+            color: var(--primary);
+        }
+
+        .tab-btn.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        /* TAB PANES */
+        .tab-pane {
+            display: none;
+        }
+
+        .tab-pane.active {
+            display: block;
+        }
+
+        /* CARDS & FORMS */
+        .panel-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+            margin-bottom: 24px;
+        }
+
+        .panel-header {
+            margin-bottom: 20px;
+        }
+
+        .panel-title {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .panel-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+
+        .form-group {
+            margin-bottom: 16px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-main);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 10px 14px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            outline: none;
+            transition: all 0.2s ease;
+            background: #f8fafc;
+        }
+
+        .form-control:focus {
+            background: white;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+        }
+
+        /* DROPZONE */
+        .file-dropzone {
+            border: 2px dashed #cbd5e1;
+            border-radius: var(--radius-lg);
+            padding: 32px 20px;
+            text-align: center;
+            background: #f8fafc;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .file-dropzone:hover, .file-dropzone.dragover {
+            border-color: var(--primary);
+            background: var(--primary-light);
+        }
+
+        .dropzone-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .btn-primary {
+            padding: 10px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-primary:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            padding: 8px 14px;
+            background: #f1f5f9;
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-danger-sm {
+            padding: 6px 12px;
+            background: white;
+            color: var(--danger);
+            border: 1px solid #fecaca;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-danger-sm:hover {
+            background: var(--danger-light);
+        }
+
+        /* TABLE */
+        .table-responsive {
+            overflow-x: auto;
+        }
+
+        .data-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+
+        .data-table th {
+            background: #f8fafc;
+            color: var(--text-muted);
+            font-weight: 600;
+            padding: 12px 14px;
+            border-bottom: 1px solid var(--border);
+            white-space: nowrap;
+        }
+
+        .data-table td {
+            padding: 14px;
+            border-bottom: 1px solid var(--border);
+            vertical-align: middle;
+        }
+
+        .data-table tr:hover td {
+            background: #f8fafc;
+        }
+
+        .badge-cat {
+            display: inline-block;
+            background: #eff6ff;
+            color: #1e40af;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 12px;
+            border: 1px solid #bfdbfe;
+        }
+
+        .badge-status {
+            display: inline-block;
+            font-size: 11px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 12px;
+        }
+
+        .status-indexed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-failed {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        .actions-cell {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+        }
+
+        /* SEARCH & FILTER BAR */
+        .filter-bar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .filter-search {
+            flex: 1;
+            min-width: 240px;
+        }
+
+        /* RETRIEVAL CHUNK CARD */
+        .retrieval-chunk-card {
+            background: #ffffff;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 16px;
+            margin-bottom: 14px;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .chunk-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+            font-size: 12px;
+        }
+
+        .distance-pill {
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 11px;
+        }
+
+        .dist-high {
+            background: #dcfce7;
+            color: #15803d;
+        }
+
+        .dist-med {
+            background: #fef9c3;
+            color: #854d0e;
+        }
+
+        .dist-low {
+            background: #f1f5f9;
+            color: #475569;
+        }
+
+        .chunk-body {
+            font-size: 13px;
+            line-height: 1.6;
+            color: #334155;
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 6px;
+            border-left: 3px solid var(--primary);
+            white-space: pre-wrap;
+            max-height: 250px;
+            overflow-y: auto;
+        }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(15, 23, 42, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 16px;
+            backdrop-filter: blur(2px);
+        }
+
+        .modal-card {
+            background: white;
+            border-radius: var(--radius-lg);
+            width: 100%;
+            max-width: 600px;
+            padding: 24px;
+            box-shadow: 0 16px 36px rgba(0,0,0,0.15);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 12px;
+        }
+
+        .modal-title {
+            font-size: 17px;
+            font-weight: 700;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .meta-list dt {
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            margin-top: 10px;
+        }
+
+        .meta-list dd {
+            font-size: 13px;
+            color: var(--text-main);
+            margin-top: 2px;
+            word-break: break-all;
+        }
+
+        .alert-box {
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: none;
+        }
+
+        .alert-success {
+            background: var(--success-light);
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .alert-danger {
+            background: var(--danger-light);
+            color: #991b1b;
+            border: 1px solid #fecaca;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-brand">
+            <div class="logo-icon">C</div>
+            <div>
+                <div class="logo-title">Campus<span>GPT</span> <span class="badge-admin">KNOWLEDGE MANAGER</span></div>
+            </div>
+        </div>
+        <div class="header-nav">
+            <a href="/" class="btn-header" target="_blank">
+                💬 Open Student Chat
+            </a>
+            <button onclick="handleLogout()" class="btn-header btn-logout">
+                🚪 Sign Out
+            </button>
+        </div>
+    </header>
+
+    <main class="admin-container">
+        
+        <div id="globalAlert" class="alert-box"></div>
+
+        <!-- STATS RIBBON -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Indexed Documents</div>
+                <div class="stat-value" id="statDocsCount">-</div>
+                <div class="stat-sub">Authoritative sources in catalog</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Total Vector Chunks</div>
+                <div class="stat-value" id="statChunksCount">-</div>
+                <div class="stat-sub">1024-dim Jina embeddings in ChromaDB</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Active Categories</div>
+                <div class="stat-value" id="statCategoriesCount">-</div>
+                <div class="stat-sub">University academic domains covered</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">System Health</div>
+                <div class="stat-value" style="color: var(--success);" id="statHealth">Active</div>
+                <div class="stat-sub">Vector DB & API Operational</div>
+            </div>
+        </div>
+
+        <!-- TABS BAR -->
+        <div class="tabs-bar">
+            <button class="tab-btn active" onclick="switchTab('repo')">
+                📚 Document Repository
+            </button>
+            <button class="tab-btn" onclick="switchTab('upload')">
+                📄 Add Document (File)
+            </button>
+            <button class="tab-btn" onclick="switchTab('webpage')">
+                🌐 Add Webpage (URL)
+            </button>
+            <button class="tab-btn" onclick="switchTab('test')">
+                🔍 Test Retrieval Sandbox
+            </button>
+        </div>
+
+        <!-- TAB 1: DOCUMENT REPOSITORY -->
+        <div id="tab-repo" class="tab-pane active">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title">Active University Knowledge Base</div>
+                    <div class="panel-desc">Manage, search, reindex, replace, and remove university documents.</div>
+                </div>
+
+                <div class="filter-bar">
+                    <input 
+                        type="text" 
+                        id="searchQuery" 
+                        class="form-control filter-search" 
+                        placeholder="Search documents by title, category, or ID..."
+                        oninput="loadDocuments()"
+                    />
+                    <select id="filterCategory" class="form-control" style="width: 220px;" onchange="loadDocuments()">
+                        <option value="all">All Categories</option>
+                    </select>
+                    <select id="filterStatus" class="form-control" style="width: 160px;" onchange="loadDocuments()">
+                        <option value="all">All Statuses</option>
+                        <option value="indexed">Indexed</option>
+                        <option value="failed">Failed</option>
+                    </select>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Document Title</th>
+                                <th>Category</th>
+                                <th>Type</th>
+                                <th>Chunks</th>
+                                <th>Version</th>
+                                <th>Last Indexed</th>
+                                <th>Status</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="documentsTableBody">
+                            <tr>
+                                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">
+                                    Loading knowledge base documents...
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: ADD DOCUMENT (FILE) -->
+        <div id="tab-upload" class="tab-pane">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title">Upload & Ingest University Document</div>
+                    <div class="panel-desc">Supports PDF (with automatic selective OCR), TXT, MD, and DOCX files. Chunks and embeddings are created incrementally.</div>
+                </div>
+
+                <form id="uploadForm" onsubmit="handleFileUpload(event)">
+                    <div class="form-group">
+                        <label>Select Document File *</label>
+                        <div class="file-dropzone" id="dropzone" onclick="document.getElementById('fileInput').click()">
+                            <div class="dropzone-icon">📁</div>
+                            <div style="font-weight: 600; font-size: 14px;" id="dropzoneText">Click to browse or drag & drop file here</div>
+                            <div style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Supported: .pdf, .txt, .md, .docx (Max 16 MB)</div>
+                        </div>
+                        <input type="file" id="fileInput" accept=".pdf,.txt,.md,.docx" style="display: none;" onchange="handleFileSelect(event)" />
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="docTitle">Document Title</label>
+                            <input type="text" id="docTitle" class="form-control" placeholder="e.g., Academic Calendar 2026-2027" />
+                        </div>
+                        <div class="form-group">
+                            <label for="docCategory">Category *</label>
+                            <select id="docCategory" class="form-control" required>
+                                <option value="">Select Category...</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="docPublisher">Publisher / Issuing Body</label>
+                            <input type="text" id="docPublisher" class="form-control" placeholder="e.g., Office of Controller of Examinations" />
+                        </div>
+                        <div class="form-group">
+                            <label for="docSourceUrl">Official Source Link (URL)</label>
+                            <input type="url" id="docSourceUrl" class="form-control" placeholder="https://vitap.ac.in/..." />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="docPubDate">Publication Date</label>
+                            <input type="date" id="docPubDate" class="form-control" />
+                        </div>
+                        <div class="form-group">
+                            <label for="docEffDate">Effective / Applicable Date</label>
+                            <input type="date" id="docEffDate" class="form-control" />
+                        </div>
+                    </div>
+
+                    <button type="submit" id="btnUploadSubmit" class="btn-primary">
+                        🚀 Ingest & Index Document
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- TAB 3: ADD WEBPAGE (URL) -->
+        <div id="tab-webpage" class="tab-pane">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title">Safe Webpage Ingestion</div>
+                    <div class="panel-desc">Enter an official university webpage URL. Content is fetched with strict SSRF protections, stripped of navigation/scripts, and indexed.</div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group" style="flex: 2;">
+                        <label for="webUrl">Webpage URL *</label>
+                        <input type="url" id="webUrl" class="form-control" placeholder="https://vitap.ac.in/library-services" required />
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="webCategory">Category *</label>
+                        <select id="webCategory" class="form-control" required>
+                            <option value="">Select Category...</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="webTitle">Custom Title (Optional, auto-extracted if blank)</label>
+                        <input type="text" id="webTitle" class="form-control" placeholder="e.g., Central Library Rules" />
+                    </div>
+                    <div class="form-group">
+                        <label for="webPublisher">Publisher</label>
+                        <input type="text" id="webPublisher" class="form-control" value="VIT-AP University Portal" />
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <button type="button" class="btn-secondary" onclick="previewWebpage()" id="btnWebPreview">
+                        👀 Preview Extracted Content
+                    </button>
+                    <button type="button" class="btn-primary" onclick="indexWebpage()" id="btnWebIndex">
+                        🌐 Index Webpage to ChromaDB
+                    </button>
+                </div>
+
+                <div id="webPreviewBox" style="display: none; background: #f8fafc; border: 1px solid var(--border); border-radius: var(--radius-md); padding: 16px;">
+                    <h4 id="prevTitle" style="margin-bottom: 8px;"></h4>
+                    <div id="prevDesc" style="font-size: 12px; color: var(--text-muted); margin-bottom: 12px;"></div>
+                    <div style="font-weight: 600; font-size: 12px; margin-bottom: 6px;">Main Content Excerpt:</div>
+                    <div id="prevSnippet" class="chunk-body" style="max-height: 200px;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 4: TEST RETRIEVAL SANDBOX -->
+        <div id="tab-test" class="tab-pane">
+            <div class="panel-card">
+                <div class="panel-header">
+                    <div class="panel-title">Knowledge Base Retrieval Sandbox</div>
+                    <div class="panel-desc">Test whether newly added information is retrievable. Inspect cosine distances and chunk relevance without modifying production state.</div>
+                </div>
+
+                <form onsubmit="handleTestRetrieval(event)">
+                    <div class="form-group">
+                        <label for="testQuery">Student Question / Retrieval Query *</label>
+                        <input 
+                            type="text" 
+                            id="testQuery" 
+                            class="form-control" 
+                            placeholder="e.g., What are the hostel in-time timings for ladies hostels?" 
+                            required 
+                        />
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="testCategory">Filter by Category</label>
+                            <select id="testCategory" class="form-control">
+                                <option value="">All Categories</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="testTopK">Top Results (K)</label>
+                            <select id="testTopK" class="form-control">
+                                <option value="3">Top 3 Chunks</option>
+                                <option value="5" selected>Top 5 Chunks</option>
+                                <option value="10">Top 10 Chunks</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="btnTestSubmit" class="btn-primary">
+                        🔍 Execute Semantic Retrieval
+                    </button>
+                </form>
+
+                <div id="testResultsArea" style="margin-top: 24px;"></div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- METADATA INSPECT MODAL -->
+    <div class="modal-overlay" id="inspectModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">Document Metadata Details</div>
+                <button class="close-btn" onclick="closeModal('inspectModal')">&times;</button>
+            </div>
+            <dl class="meta-list" id="inspectMetaContent"></dl>
+            <div style="margin-top: 20px; text-align: right;">
+                <button class="btn-secondary" onclick="closeModal('inspectModal')">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- REPLACE DOCUMENT MODAL -->
+    <div class="modal-overlay" id="replaceModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <div class="modal-title">Replace Document Version</div>
+                <button class="close-btn" onclick="closeModal('replaceModal')">&times;</button>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 16px;">
+                Upload a revised file to replace document <strong id="replaceDocIdLabel"></strong>. New chunks will be staged and verified before old chunks are atomicly replaced.
+            </p>
+            <form id="replaceForm" onsubmit="handleReplaceSubmit(event)">
+                <input type="hidden" id="replaceDocId" />
+                <div class="form-group">
+                    <label>Select Revised File (PDF, TXT, DOCX) *</label>
+                    <input type="file" id="replaceFileInput" class="form-control" accept=".pdf,.txt,.md,.docx" required />
+                </div>
+                <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn-secondary" onclick="closeModal('replaceModal')">Cancel</button>
+                    <button type="submit" class="btn-primary" id="btnReplaceSubmit">Upload & Replace</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        const STANDARD_CATEGORIES = [
+            "Academics and Courses",
+            "Course Registration and FFCS",
+            "Examinations",
+            "Academic Calendar",
+            "Admissions",
+            "Fees and Scholarships",
+            "Hostel",
+            "Transport",
+            "Library",
+            "Attendance",
+            "Departments and Contacts",
+            "Placements",
+            "Campus Facilities",
+            "University Policies",
+            "Other"
+        ];
+
+        let selectedFile = null;
+        let allDocumentsCache = [];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            populateCategoryDropdowns();
+            loadStats();
+            loadDocuments();
+            initDragAndDrop();
+        });
+
+        function populateCategoryDropdowns() {
+            const dropdowns = [
+                document.getElementById("docCategory"),
+                document.getElementById("webCategory"),
+                document.getElementById("filterCategory"),
+                document.getElementById("testCategory")
+            ];
+
+            dropdowns.forEach(dd => {
+                if (!dd) return;
+                const isFilter = dd.id.startsWith("filter") || dd.id.startsWith("test");
+                STANDARD_CATEGORIES.forEach(cat => {
+                    const opt = document.createElement("option");
+                    opt.value = cat;
+                    opt.textContent = cat;
+                    dd.appendChild(opt);
+                });
+            });
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll(".tab-btn").forEach(btn => btn.classList.remove("active"));
+            document.querySelectorAll(".tab-pane").forEach(pane => pane.classList.remove("active"));
+
+            const targetPane = document.getElementById(`tab-${tabId}`);
+            if (targetPane) targetPane.classList.add("active");
+
+            event.currentTarget.classList.add("active");
+            if (tabId === "repo") loadDocuments();
+        }
+
+        function showAlert(msg, isSuccess = true) {
+            const alertBox = document.getElementById("globalAlert");
+            alertBox.className = `alert-box ${isSuccess ? 'alert-success' : 'alert-danger'}`;
+            alertBox.textContent = msg;
+            alertBox.style.display = "block";
+            window.scrollTo({ top: 0, behavior: "smooth" });
+            setTimeout(() => { alertBox.style.display = "none"; }, 7000);
+        }
+
+        async function loadStats() {
+            try {
+                const res = await fetch("/api/admin/stats");
+                if (res.status === 401) { window.location.href = "/admin/login"; return; }
+                const data = await res.json();
+                if (data.success) {
+                    document.getElementById("statDocsCount").textContent = data.stats.total_documents || 0;
+                    document.getElementById("statChunksCount").textContent = data.stats.total_chunks || 0;
+                    document.getElementById("statCategoriesCount").textContent = data.stats.total_categories || 0;
+                }
+            } catch (err) {
+                console.error("Failed to load stats", err);
+            }
+        }
+
+        async function loadDocuments() {
+            const tbody = document.getElementById("documentsTableBody");
+            const cat = document.getElementById("filterCategory").value;
+            const status = document.getElementById("filterStatus").value;
+            const q = document.getElementById("searchQuery").value.trim();
+
+            const params = new URLSearchParams();
+            if (cat && cat !== "all") params.append("category", cat);
+            if (status && status !== "all") params.append("status", status);
+            if (q) params.append("search", q);
+
+            try {
+                const res = await fetch(`/api/admin/documents?${params.toString()}`);
+                if (res.status === 401) { window.location.href = "/admin/login"; return; }
+                const data = await res.json();
+                
+                if (!data.success || !data.documents || data.documents.length === 0) {
+                    tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 30px;">No documents match the current criteria.</td></tr>`;
+                    return;
+                }
+
+                allDocumentsCache = data.documents;
+                tbody.innerHTML = "";
+
+                data.documents.forEach(doc => {
+                    const tr = document.createElement("tr");
+                    const dateStr = doc.last_indexed ? new Date(doc.last_indexed).toLocaleDateString() : "-";
+                    const statusClass = doc.status === "indexed" ? "status-indexed" : "status-failed";
+
+                    tr.innerHTML = `
+                        <td><strong>${escapeHtml(doc.title)}</strong><br><small style="color:var(--text-muted); font-size:11px;">ID: ${escapeHtml(doc.doc_id)}</small></td>
+                        <td><span class="badge-cat">${escapeHtml(doc.category)}</span></td>
+                        <td><span style="font-size:12px; text-transform:uppercase; color:var(--text-muted);">${doc.source_type}</span></td>
+                        <td><strong>${doc.chunks_count}</strong></td>
+                        <td>v${escapeHtml(doc.version || "1.0")}</td>
+                        <td style="font-size:12px; color:var(--text-muted);">${dateStr}</td>
+                        <td><span class="badge-status ${statusClass}">${escapeHtml(doc.status)}</span></td>
+                        <td>
+                            <div class="actions-cell">
+                                <button class="btn-secondary" onclick="openInspectModal('${escapeHtml(doc.doc_id)}')">Details</button>
+                                <button class="btn-secondary" onclick="reindexDoc('${escapeHtml(doc.doc_id)}')">Reindex</button>
+                                <button class="btn-secondary" onclick="openReplaceModal('${escapeHtml(doc.doc_id)}')">Replace</button>
+                                <button class="btn-danger-sm" onclick="deleteDoc('${escapeHtml(doc.doc_id)}')">Delete</button>
+                            </div>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            } catch (err) {
+                tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--danger); padding: 20px;">Failed to load documents.</td></tr>`;
+            }
+        }
+
+        // UPLOAD HANDLING
+        function initDragAndDrop() {
+            const dropzone = document.getElementById("dropzone");
+            if (!dropzone) return;
+
+            ["dragenter", "dragover"].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    dropzone.classList.add("dragover");
+                }, false);
+            });
+
+            ["dragleave", "drop"].forEach(eventName => {
+                dropzone.addEventListener(eventName, (e) => {
+                    e.preventDefault(); e.stopPropagation();
+                    dropzone.classList.remove("dragover");
+                }, false);
+            });
+
+            dropzone.addEventListener("drop", (e) => {
+                const dt = e.dataTransfer;
+                if (dt.files && dt.files.length) {
+                    selectedFile = dt.files[0];
+                    document.getElementById("fileInput").files = dt.files;
+                    updateDropzoneText(selectedFile.name);
+                }
+            });
+        }
+
+        function handleFileSelect(e) {
+            if (e.target.files && e.target.files.length) {
+                selectedFile = e.target.files[0];
+                updateDropzoneText(selectedFile.name);
+                // Auto-fill title if empty
+                const titleInput = document.getElementById("docTitle");
+                if (!titleInput.value) {
+                    titleInput.value = selectedFile.name.replace(/\.[^/.]+$/, "").replace(/_/g, " ");
+                }
+            }
+        }
+
+        function updateDropzoneText(name) {
+            document.getElementById("dropzoneText").textContent = `Selected: ${name}`;
+        }
+
+        async function handleFileUpload(e) {
+            e.preventDefault();
+            if (!selectedFile) {
+                alert("Please select a file to upload.");
+                return;
+            }
+
+            const btn = document.getElementById("btnUploadSubmit");
+            btn.disabled = true;
+            btn.textContent = "Processing & Ingesting...";
+
+            const formData = new FormData();
+            formData.append("file", selectedFile);
+            formData.append("title", document.getElementById("docTitle").value.trim());
+            formData.append("category", document.getElementById("docCategory").value);
+            formData.append("publisher", document.getElementById("docPublisher").value.trim());
+            formData.append("source_url", document.getElementById("docSourceUrl").value.trim());
+            formData.append("publication_date", document.getElementById("docPubDate").value);
+            formData.append("effective_date", document.getElementById("docEffDate").value);
+
+            try {
+                const res = await fetch("/api/admin/upload", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showAlert(`Document '${data.title}' ingested successfully! (${data.chunks_stored} chunks created)`, true);
+                    document.getElementById("uploadForm").reset();
+                    selectedFile = null;
+                    document.getElementById("dropzoneText").textContent = "Click to browse or drag & drop file here";
+                    loadStats();
+                    switchTab("repo");
+                } else if (data.is_duplicate) {
+                    showAlert(data.message, false);
+                } else {
+                    showAlert(data.error || "Upload failed", false);
+                }
+            } catch (err) {
+                showAlert("Network error during document ingestion.", false);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "🚀 Ingest & Index Document";
+            }
+        }
+
+        // WEBPAGE HANDLING
+        async function previewWebpage() {
+            const url = document.getElementById("webUrl").value.trim();
+            if (!url) { alert("Please enter a valid webpage URL."); return; }
+
+            const btn = document.getElementById("btnWebPreview");
+            btn.disabled = true;
+            btn.textContent = "Fetching Preview...";
+
+            try {
+                const res = await fetch("/api/admin/webpage/preview", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    document.getElementById("prevTitle").textContent = data.preview.title;
+                    document.getElementById("prevDesc").textContent = data.preview.description || "No meta description provided.";
+                    document.getElementById("prevSnippet").textContent = data.preview.text;
+                    document.getElementById("webPreviewBox").style.display = "block";
+                    // Auto-fill title
+                    if (!document.getElementById("webTitle").value) {
+                        document.getElementById("webTitle").value = data.preview.title;
+                    }
+                } else {
+                    showAlert(data.error || "Webpage preview failed", false);
+                }
+            } catch (err) {
+                showAlert("Network error during webpage preview.", false);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "👀 Preview Extracted Content";
+            }
+        }
+
+        async function indexWebpage() {
+            const url = document.getElementById("webUrl").value.trim();
+            const category = document.getElementById("webCategory").value;
+            if (!url) { alert("Please enter a valid webpage URL."); return; }
+            if (!category) { alert("Please select a category."); return; }
+
+            const btn = document.getElementById("btnWebIndex");
+            btn.disabled = true;
+            btn.textContent = "Indexing Webpage...";
+
+            try {
+                const res = await fetch("/api/admin/webpage/index", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        url,
+                        category,
+                        title: document.getElementById("webTitle").value.trim(),
+                        publisher: document.getElementById("webPublisher").value.trim()
+                    })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showAlert(`Webpage '${data.title}' indexed successfully! (${data.chunks_stored} chunks created)`, true);
+                    document.getElementById("webUrl").value = "";
+                    document.getElementById("webTitle").value = "";
+                    document.getElementById("webPreviewBox").style.display = "none";
+                    loadStats();
+                    switchTab("repo");
+                } else if (data.is_duplicate) {
+                    showAlert(data.message, false);
+                } else {
+                    showAlert(data.error || "Webpage indexing failed", false);
+                }
+            } catch (err) {
+                showAlert("Network error during webpage indexing.", false);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "🌐 Index Webpage to ChromaDB";
+            }
+        }
+
+        // TEST RETRIEVAL SANDBOX
+        async function handleTestRetrieval(e) {
+            e.preventDefault();
+            const query = document.getElementById("testQuery").value.trim();
+            const category = document.getElementById("testCategory").value;
+            const top_k = document.getElementById("testTopK").value;
+            const area = document.getElementById("testResultsArea");
+            const btn = document.getElementById("btnTestSubmit");
+
+            btn.disabled = true;
+            btn.textContent = "Searching ChromaDB...";
+            area.innerHTML = "<p style='color:var(--text-muted);'>Searching vector store...</p>";
+
+            try {
+                const res = await fetch("/api/admin/test-retrieval", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ query, category: category || null, top_k: parseInt(top_k) })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    if (!data.results || data.results.length === 0) {
+                        area.innerHTML = `<div class="panel-card" style="text-align: center; color: var(--text-muted);">No relevant document chunks found matching this query.</div>`;
+                        return;
+                    }
+
+                    let html = `<div style="font-weight: 700; margin-bottom: 12px; font-size: 14px;">Retrieved ${data.results.length} Chunks (Query: "${escapeHtml(query)}"):</div>`;
+                    data.results.forEach((item, idx) => {
+                        let distClass = "dist-low";
+                        if (item.distance < 0.6) distClass = "dist-high";
+                        else if (item.distance < 1.0) distClass = "dist-med";
+
+                        html += `
+                            <div class="retrieval-chunk-card">
+                                <div class="chunk-meta">
+                                    <span style="font-weight: 700; font-size: 13px;">#${idx+1} ${escapeHtml(item.title)}</span>
+                                    <span class="badge-cat">${escapeHtml(item.category)}</span>
+                                    <span style="color:var(--text-muted);">Page: ${item.page}</span>
+                                    <span class="distance-pill ${distClass}">Distance: ${item.distance} (${escapeHtml(item.distance_meaning)})</span>
+                                    ${item.source_url ? `<a href="${escapeHtml(item.source_url)}" target="_blank" style="margin-left:auto; color:var(--primary); font-size:12px; text-decoration:none;">Open Source ↗</a>` : ''}
+                                </div>
+                                <div class="chunk-body">${escapeHtml(item.text)}</div>
+                            </div>
+                        `;
+                    });
+                    area.innerHTML = html;
+                } else {
+                    area.innerHTML = `<div class="alert-box alert-danger" style="display:block;">${data.error || 'Retrieval test failed'}</div>`;
+                }
+            } catch (err) {
+                area.innerHTML = `<div class="alert-box alert-danger" style="display:block;">Network error executing retrieval test.</div>`;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "🔍 Execute Semantic Retrieval";
+            }
+        }
+
+        // ACTIONS: REINDEX, REPLACE, DELETE
+        async function reindexDoc(docId) {
+            if (!confirm(`Re-index document '${docId}'? Chunks will be safely re-computed and updated.`)) return;
+            try {
+                const res = await fetch("/api/admin/document/reindex", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ doc_id: docId })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showAlert(`Document '${docId}' re-indexed successfully!`, true);
+                    loadStats();
+                    loadDocuments();
+                } else {
+                    showAlert(data.error || "Re-indexing failed", false);
+                }
+            } catch (err) {
+                showAlert("Network error during re-indexing.", false);
+            }
+        }
+
+        async function deleteDoc(docId) {
+            if (!confirm(`Are you sure you want to delete '${docId}' from the university knowledge base? Only chunks belonging to this document will be removed.`)) return;
+            try {
+                const res = await fetch(`/api/admin/document/${encodeURIComponent(docId)}`, {
+                    method: "DELETE"
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    showAlert(data.message || `Document '${docId}' deleted successfully.`, true);
+                    loadStats();
+                    loadDocuments();
+                } else {
+                    showAlert(data.error || "Deletion failed", false);
+                }
+            } catch (err) {
+                showAlert("Network error deleting document.", false);
+            }
+        }
+
+        // MODALS
+        function openInspectModal(docId) {
+            const doc = allDocumentsCache.find(d => d.doc_id === docId);
+            if (!doc) return;
+
+            const dl = document.getElementById("inspectMetaContent");
+            dl.innerHTML = `
+                <dt>Document ID</dt><dd>${escapeHtml(doc.doc_id)}</dd>
+                <dt>Document Title</dt><dd>${escapeHtml(doc.title)}</dd>
+                <dt>Category</dt><dd><span class="badge-cat">${escapeHtml(doc.category)}</span></dd>
+                <dt>Source Type</dt><dd>${escapeHtml(doc.source_type)}</dd>
+                <dt>Source URL</dt><dd><a href="${escapeHtml(doc.source_url)}" target="_blank" style="color:var(--primary);">${escapeHtml(doc.source_url)}</a></dd>
+                <dt>Original Filename</dt><dd>${escapeHtml(doc.original_filename || "N/A")}</dd>
+                <dt>Publisher / Department</dt><dd>${escapeHtml(doc.publisher || "VIT-AP University")}</dd>
+                <dt>Publication Date</dt><dd>${escapeHtml(doc.publication_date || "Unknown")}</dd>
+                <dt>Effective Date</dt><dd>${escapeHtml(doc.effective_date || "Unknown")}</dd>
+                <dt>Version</dt><dd>v${escapeHtml(doc.version || "1.0")}</dd>
+                <dt>SHA-256 Content Fingerprint</dt><dd><code style="font-size:11px; background:#f1f5f9; padding:2px 6px; border-radius:4px;">${escapeHtml(doc.sha256 || "N/A")}</code></dd>
+                <dt>Indexed Chunks</dt><dd>${doc.chunks_count} chunks in ChromaDB</dd>
+                <dt>Last Indexed Timestamp</dt><dd>${doc.last_indexed || "N/A"}</dd>
+            `;
+            document.getElementById("inspectModal").style.display = "flex";
+        }
+
+        function openReplaceModal(docId) {
+            document.getElementById("replaceDocId").value = docId;
+            document.getElementById("replaceDocIdLabel").textContent = docId;
+            document.getElementById("replaceFileInput").value = "";
+            document.getElementById("replaceModal").style.display = "flex";
+        }
+
+        async function handleReplaceSubmit(e) {
+            e.preventDefault();
+            const docId = document.getElementById("replaceDocId").value;
+            const fileInput = document.getElementById("replaceFileInput");
+            if (!fileInput.files.length) { alert("Please choose a replacement file."); return; }
+
+            const btn = document.getElementById("btnReplaceSubmit");
+            btn.disabled = true;
+            btn.textContent = "Replacing...";
+
+            const formData = new FormData();
+            formData.append("file", fileInput.files[0]);
+            formData.append("doc_id_to_replace", docId);
+
+            try {
+                const res = await fetch("/api/admin/upload", {
+                    method: "POST",
+                    body: formData
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    closeModal("replaceModal");
+                    showAlert(`Document '${docId}' successfully updated to version ${data.version}!`, true);
+                    loadStats();
+                    loadDocuments();
+                } else {
+                    showAlert(data.error || "Replacement failed", false);
+                }
+            } catch (err) {
+                showAlert("Network error during document replacement.", false);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "Upload & Replace";
+            }
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = "none";
+        }
+
+        async function handleLogout() {
+            try {
+                await fetch("/admin/logout", { method: "POST" });
+                window.location.href = "/admin/login";
+            } catch (err) {
+                window.location.href = "/admin/login";
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return "";
+            return String(text)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>

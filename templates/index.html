@@ -530,6 +530,94 @@
             color: #991b1b;
         }
 
+        /* SOURCES CITATION CONTAINER */
+        .sources-details {
+            margin-top: 14px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 10px;
+        }
+
+        .sources-summary {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            user-select: none;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background: #f1f5f9;
+            transition: all 0.2s ease;
+        }
+
+        .sources-summary:hover {
+            background: #e2e8f0;
+            color: var(--text-main);
+        }
+
+        .sources-card-list {
+            margin-top: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .source-card-item {
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 12px;
+            font-size: 12px;
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        .source-title-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .source-doc-title {
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .source-badge {
+            background: #eff6ff;
+            color: #2563eb;
+            font-size: 11px;
+            font-weight: 500;
+            padding: 2px 6px;
+            border-radius: 4px;
+            border: 1px solid #dbeafe;
+        }
+
+        .source-date-badge {
+            font-size: 11px;
+            color: #64748b;
+        }
+
+        .source-link-btn {
+            font-size: 11px;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+        }
+
+        .source-link-btn:hover {
+            text-decoration: underline;
+        }
+
         @media (max-width: 768px) {
             header { padding: 12px 16px; }
             .app-container { padding: 8px; }
@@ -554,6 +642,9 @@
             <button class="btn-header" id="newChatButton" onclick="startNewChat()">
                 🔄 New Chat
             </button>
+            <a href="/admin/knowledge-base" class="btn-header" style="text-decoration: none;" title="Admin Knowledge Manager">
+                🔐 Admin Console
+            </a>
         </div>
     </header>
 
@@ -702,7 +793,7 @@
                 loadingRow.remove();
 
                 if (response.ok && data.answer) {
-                    appendMessage("bot", data.answer);
+                    appendMessage("bot", data.answer, data.sources);
                 } else {
                     const err = data.error || "An error occurred while communicating with the assistant.";
                     appendMessage("bot", `⚠️ ${err}`);
@@ -718,7 +809,7 @@
             }
         }
 
-        function appendMessage(sender, text) {
+        function appendMessage(sender, text, sources = []) {
             const row = document.createElement("div");
             row.className = `message-row ${sender}`;
 
@@ -733,6 +824,71 @@
                 bubble.textContent = text;
             } else {
                 bubble.innerHTML = formatMarkdown(text);
+
+                if (sources && Array.isArray(sources) && sources.length > 0) {
+                    const details = document.createElement("details");
+                    details.className = "sources-details";
+                    if (sources.length <= 3) {
+                        details.open = true;
+                    }
+
+                    const summary = document.createElement("summary");
+                    summary.className = "sources-summary";
+                    summary.innerHTML = `📚 Verified Sources (${sources.length})`;
+                    details.appendChild(summary);
+
+                    const list = document.createElement("div");
+                    list.className = "sources-card-list";
+
+                    sources.forEach(src => {
+                        const item = document.createElement("div");
+                        item.className = "source-card-item";
+
+                        const titleGrp = document.createElement("div");
+                        titleGrp.className = "source-title-group";
+
+                        const titleSpan = document.createElement("span");
+                        titleSpan.className = "source-doc-title";
+                        titleSpan.textContent = src.title || src.source || "University Document";
+                        titleGrp.appendChild(titleSpan);
+
+                        if (src.page && src.page !== "Unknown") {
+                            const pageBadge = document.createElement("span");
+                            pageBadge.className = "source-badge";
+                            pageBadge.textContent = `Page ${src.page}`;
+                            titleGrp.appendChild(pageBadge);
+                        }
+
+                        if (src.effective_date) {
+                            const dateBadge = document.createElement("span");
+                            dateBadge.className = "source-date-badge";
+                            dateBadge.textContent = `Effective: ${src.effective_date}`;
+                            titleGrp.appendChild(dateBadge);
+                        } else if (src.publication_date) {
+                            const dateBadge = document.createElement("span");
+                            dateBadge.className = "source-date-badge";
+                            dateBadge.textContent = `Published: ${src.publication_date}`;
+                            titleGrp.appendChild(dateBadge);
+                        }
+
+                        item.appendChild(titleGrp);
+
+                        if (src.source_url) {
+                            const link = document.createElement("a");
+                            link.className = "source-link-btn";
+                            link.href = src.source_url;
+                            link.target = "_blank";
+                            link.rel = "noopener noreferrer";
+                            link.innerHTML = `🔗 Source`;
+                            item.appendChild(link);
+                        }
+
+                        list.appendChild(item);
+                    });
+
+                    details.appendChild(list);
+                    bubble.appendChild(details);
+                }
             }
 
             row.appendChild(avatar);
