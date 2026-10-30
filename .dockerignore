@@ -1,0 +1,12 @@
+venv/
+.env
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.coverage
+htmlcov/
+data/uploads/*
+vectorstore/backup_chroma/
+*.git
+*.log

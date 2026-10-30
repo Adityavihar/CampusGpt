@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CampusGPT — VIT-AP University Assistant</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --primary-dark: #1d4ed8;
+            --primary-light: #eff6ff;
+            --accent: #6366f1;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --user-bubble: #2563eb;
+            --bot-bubble: #ffffff;
+            --danger: #ef4444;
+            --success: #10b981;
+            --radius-lg: 16px;
+            --radius-md: 10px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
+            --shadow-lg: 0 12px 28px rgba(0,0,0,0.12);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+        }
+
+        body {
+            background: var(--bg);
+            color: var(--text-main);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* HEADER */
+        header {
+            background: var(--card-bg);
+            border-bottom: 1px solid var(--border);
+            padding: 14px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: var(--shadow-sm);
+            z-index: 10;
+        }
+
+        .header-brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 38px;
+            height: 38px;
+            background: linear-gradient(135deg, #2563eb, #6366f1);
+            color: white;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 20px;
+            box-shadow: 0 2px 8px rgba(37,99,235,0.3);
+        }
+
+        .logo-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: var(--text-main);
+            letter-spacing: -0.5px;
+        }
+
+        .logo-title span {
+            color: var(--primary);
+        }
+
+        .badge {
+            background: #e0e7ff;
+            color: #4338ca;
+            font-size: 11px;
+            font-weight: 600;
+            padding: 3px 8px;
+            border-radius: 20px;
+            margin-left: 8px;
+        }
+
+        .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .btn-header {
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            background: white;
+            color: var(--text-main);
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-header:hover {
+            background: #f1f5f9;
+            border-color: #cbd5e1;
+        }
+
+        .btn-attendance {
+            border-color: #c7d2fe;
+            color: #4338ca;
+            background: #eef2ff;
+        }
+
+        .btn-attendance:hover {
+            background: #e0e7ff;
+        }
+
+        /* MAIN WRAPPER */
+        .app-container {
+            flex: 1;
+            display: flex;
+            max-width: 1100px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 16px;
+            gap: 16px;
+            height: calc(100vh - 66px);
+        }
+
+        /* CHAT WINDOW */
+        .chat-panel {
+            flex: 1;
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            scroll-behavior: smooth;
+        }
+
+        /* WELCOME STATE */
+        .welcome-hero {
+            text-align: center;
+            margin: auto 0;
+            padding: 40px 20px;
+        }
+
+        .welcome-hero h1 {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-main);
+            margin-bottom: 8px;
+        }
+
+        .welcome-hero p {
+            color: var(--text-muted);
+            font-size: 15px;
+            max-width: 540px;
+            margin: 0 auto 28px auto;
+            line-height: 1.5;
+        }
+
+        .suggestions-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 10px;
+            max-width: 720px;
+            margin: 0 auto;
+        }
+
+        .suggestion-card {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            padding: 12px 16px;
+            border-radius: var(--radius-md);
+            font-size: 13px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .suggestion-card:hover {
+            background: #f1f5f9;
+            border-color: var(--primary);
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* MESSAGE ROWS */
+        .message-row {
+            display: flex;
+            gap: 12px;
+            max-width: 85%;
+        }
+
+        .message-row.user {
+            margin-left: auto;
+            flex-direction: row-reverse;
+        }
+
+        .message-row.bot {
+            margin-right: auto;
+        }
+
+        .avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .avatar.user-av {
+            background: #e2e8f0;
+            color: #334155;
+        }
+
+        .avatar.bot-av {
+            background: linear-gradient(135deg, #3b82f6, #6366f1);
+            color: white;
+        }
+
+        .bubble {
+            padding: 14px 18px;
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            line-height: 1.6;
+            word-break: break-word;
+        }
+
+        .message-row.user .bubble {
+            background: var(--user-bubble);
+            color: white;
+            border-top-right-radius: 4px;
+        }
+
+        .message-row.bot .bubble {
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            border-top-left-radius: 4px;
+        }
+
+        .message-row.bot .bubble h3, 
+        .message-row.bot .bubble h4 {
+            margin: 12px 0 6px 0;
+            color: var(--text-main);
+        }
+
+        .message-row.bot .bubble ul, 
+        .message-row.bot .bubble ol {
+            padding-left: 20px;
+            margin: 8px 0;
+        }
+
+        .message-row.bot .bubble li {
+            margin-bottom: 4px;
+        }
+
+
+
+        /* CHAT INPUT AREA */
+        .chat-input-bar {
+            padding: 16px 20px;
+            background: white;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-box {
+            flex: 1;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            font-size: 14px;
+            outline: none;
+            transition: all 0.2s ease;
+            background: #f8fafc;
+        }
+
+        .input-box:focus {
+            background: white;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(59,130,246,0.15);
+        }
+
+        .btn-send {
+            padding: 12px 20px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .btn-send:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-send:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        /* TYPING INDICATOR */
+        .typing-dots {
+            display: inline-flex;
+            gap: 4px;
+            align-items: center;
+            padding: 4px 8px;
+        }
+
+        .dot {
+            width: 7px;
+            height: 7px;
+            background: #94a3b8;
+            border-radius: 50%;
+            animation: pulse 1.4s infinite ease-in-out both;
+        }
+
+        .dot:nth-child(1) { animation-delay: -0.32s; }
+        .dot:nth-child(2) { animation-delay: -0.16s; }
+
+        @keyframes pulse {
+            0%, 80%, 100% { transform: scale(0); }
+            40% { transform: scale(1); }
+        }
+
+        /* ATTENDANCE MODAL */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+            padding: 16px;
+            backdrop-filter: blur(3px);
+        }
+
+        .modal-card {
+            background: white;
+            width: 100%;
+            max-width: 580px;
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: var(--shadow-lg);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .modal-header h2 {
+            font-size: 18px;
+            font-weight: 700;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 20px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .modal-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 8px;
+        }
+
+        .tab-btn {
+            background: none;
+            border: none;
+            padding: 6px 14px;
+            font-weight: 600;
+            font-size: 13px;
+            border-radius: 6px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+
+        .tab-btn.active {
+            background: var(--primary-light);
+            color: var(--primary);
+        }
+
+        .form-group {
+            margin-bottom: 14px;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 6px;
+            color: var(--text-main);
+        }
+
+        .form-group textarea {
+            width: 100%;
+            height: 110px;
+            padding: 10px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 13px;
+            outline: none;
+            resize: vertical;
+        }
+
+        .form-group input[type="file"] {
+            font-size: 13px;
+        }
+
+        .attendance-result-box {
+            margin-top: 14px;
+            padding: 14px;
+            background: #f8fafc;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            display: none;
+        }
+
+        .metric-summary {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 12px;
+        }
+
+        .metric-pill {
+            flex: 1;
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .metric-pill .val {
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        .metric-pill .lbl {
+            font-size: 11px;
+            color: var(--text-muted);
+        }
+
+        .subject-row {
+            padding: 8px 10px;
+            border-bottom: 1px solid #e2e8f0;
+            font-size: 13px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .status-tag {
+            font-size: 11px;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .status-safe {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        .status-warn {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+
+        @media (max-width: 768px) {
+            header { padding: 12px 16px; }
+            .app-container { padding: 8px; }
+            .message-row { max-width: 95%; }
+            .suggestions-grid { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="header-brand">
+            <div class="logo-icon">C</div>
+            <div>
+                <div class="logo-title">Campus<span>GPT</span> <span class="badge">VIT-AP</span></div>
+            </div>
+        </div>
+        <div class="header-actions">
+            <button class="btn-header btn-attendance" onclick="openAttendanceModal()">
+                📊 Attendance Calculator
+            </button>
+            <button class="btn-header" id="newChatButton" onclick="startNewChat()">
+                🔄 New Chat
+            </button>
+        </div>
+    </header>
+
+    <div class="app-container">
+        <main class="chat-panel">
+            <div class="chat-messages" id="chatBox">
+                <div class="welcome-hero" id="welcomeHero">
+                    <h1>Welcome to CampusGPT</h1>
+                    <p>Your official AI academic assistant for VIT-AP University. Ask about programs, admissions, academic regulations, FFCS, 75% attendance policy, fees, facilities, and more.</p>
+
+                    <div class="suggestions-grid">
+                        <div class="suggestion-card" onclick="askPreset('What B.Tech programs and specializations are offered by VIT-AP?')">
+                            🎓 B.Tech Programs & Specializations
+                        </div>
+                        <div class="suggestion-card" onclick="askPreset('What is the minimum attendance requirement and the debarment policy at VIT-AP?')">
+                            📋 75% Attendance & Debarment Rule
+                        </div>
+                        <div class="suggestion-card" onclick="askPreset('Explain the Fully Flexible Credit System (FFCS) at VIT-AP.')">
+                            ⚙️ How does FFCS work?
+                        </div>
+                        <div class="suggestion-card" onclick="askPreset('What are the tuition fee categories and scholarships available?')">
+                            💰 Tuition Fees & Scholarships
+                        </div>
+                        <div class="suggestion-card" onclick="askPreset('What hostel accommodation and campus facilities are available?')">
+                            🏢 Hostels & Campus Facilities
+                        </div>
+                        <div class="suggestion-card" onclick="askPreset('What are the postgraduate and M.Tech programs offered?')">
+                            📚 M.Tech & PG Programs
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chat-input-bar">
+                <input 
+                    type="text" 
+                    id="questionInput" 
+                    class="input-box" 
+                    placeholder="Ask a question about VIT-AP..."
+                    autocomplete="off"
+                />
+                <button class="btn-send" id="sendBtn" onclick="sendQuestion()">
+                    <span>Send</span>
+                </button>
+            </div>
+        </main>
+    </div>
+
+    <!-- ATTENDANCE MODAL -->
+    <div class="modal-overlay" id="attendanceModal">
+        <div class="modal-card">
+            <div class="modal-header">
+                <h2>Attendance Extraction & Calculator</h2>
+                <button class="close-modal" onclick="closeAttendanceModal()">&times;</button>
+            </div>
+            <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px;">
+                Upload an attendance report/screenshot or paste course values to check 75% eligibility and required recovery classes.
+            </p>
+
+            <div class="modal-tabs">
+                <button class="tab-btn active" id="tabTextBtn" onclick="switchAttTab('text')">Paste Text</button>
+                <button class="tab-btn" id="tabFileBtn" onclick="switchAttTab('file')">Upload Document / Image</button>
+            </div>
+
+            <div id="attTextSection">
+                <div class="form-group">
+                    <label>Course Attendance Data (e.g., "Data Structures 28 35" or "OS: 22/32"):</label>
+                    <textarea id="attText" placeholder="Data Structures 28 35&#10;Computer Networks: 30 / 40&#10;Operating Systems 22 32"></textarea>
+                </div>
+            </div>
+
+            <div id="attFileSection" style="display:none;">
+                <div class="form-group">
+                    <label>Select Attendance File (PDF, PNG, JPG):</label>
+                    <input type="file" id="attFileInput" accept=".pdf,.png,.jpg,.jpeg,.webp" />
+                </div>
+            </div>
+
+            <button class="btn-send" style="width: 100%; justify-content: center;" onclick="submitAttendance()">
+                Analyze Attendance
+            </button>
+
+            <div class="attendance-result-box" id="attResultBox"></div>
+        </div>
+    </div>
+
+    <script>
+        const chatBox = document.getElementById("chatBox");
+        const questionInput = document.getElementById("questionInput");
+        const sendBtn = document.getElementById("sendBtn");
+        const welcomeHero = document.getElementById("welcomeHero");
+
+        // Simple Markdown formatter to safely render text
+        function formatMarkdown(text) {
+            if (!text) return "";
+            let html = text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;");
+
+            // Bold
+            html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+            // Headings
+            html = html.replace(/^### (.*?)$/gm, "<h4>$1</h4>");
+            html = html.replace(/^## (.*?)$/gm, "<h3>$1</h3>");
+            // Bullet points
+            html = html.replace(/^\s*[-*]\s+(.*?)$/gm, "<li>$1</li>");
+            html = html.replace(/(<li>.*?<\/li>)/gs, "<ul>$1</ul>");
+            // Clean consecutive ULs
+            html = html.replace(/<\/ul>\s*<ul>/g, "");
+            // Paragraph line breaks
+            html = html.replace(/\n\n/g, "<br><br>");
+            return html;
+        }
+
+        function askPreset(prompt) {
+            questionInput.value = prompt;
+            sendQuestion();
+        }
+
+        async function sendQuestion() {
+            const question = questionInput.value.trim();
+            if (!question) return;
+
+            if (welcomeHero) {
+                welcomeHero.style.display = "none";
+            }
+
+            // Append User Message
+            appendMessage("user", question);
+            questionInput.value = "";
+            sendBtn.disabled = true;
+
+            // Loading indicator
+            const loadingRow = appendLoadingIndicator();
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            try {
+                const response = await fetch("/api/chat", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ question })
+                });
+
+                const data = await response.json();
+                loadingRow.remove();
+
+                if (response.ok && data.answer) {
+                    appendMessage("bot", data.answer);
+                } else {
+                    const err = data.error || "An error occurred while communicating with the assistant.";
+                    appendMessage("bot", `⚠️ ${err}`);
+                }
+            } catch (error) {
+                loadingRow.remove();
+                console.error(error);
+                appendMessage("bot", "⚠️ Network error. Please ensure the CampusGPT backend server is active.");
+            } finally {
+                sendBtn.disabled = false;
+                questionInput.focus();
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }
+        }
+
+        function appendMessage(sender, text) {
+            const row = document.createElement("div");
+            row.className = `message-row ${sender}`;
+
+            const avatar = document.createElement("div");
+            avatar.className = `avatar ${sender === 'user' ? 'user-av' : 'bot-av'}`;
+            avatar.textContent = sender === "user" ? "You" : "AI";
+
+            const bubble = document.createElement("div");
+            bubble.className = "bubble";
+
+            if (sender === "user") {
+                bubble.textContent = text;
+            } else {
+                bubble.innerHTML = formatMarkdown(text);
+            }
+
+            row.appendChild(avatar);
+            row.appendChild(bubble);
+            chatBox.appendChild(row);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function appendLoadingIndicator() {
+            const row = document.createElement("div");
+            row.className = "message-row bot";
+
+            const avatar = document.createElement("div");
+            avatar.className = "avatar bot-av";
+            avatar.textContent = "AI";
+
+            const bubble = document.createElement("div");
+            bubble.className = "bubble";
+            bubble.innerHTML = `
+                <div class="typing-dots">
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                    <span class="dot"></span>
+                </div>
+            `;
+
+            row.appendChild(avatar);
+            row.appendChild(bubble);
+            chatBox.appendChild(row);
+            return row;
+        }
+
+        async function startNewChat() {
+            if (!confirm("Start a new chat conversation?")) return;
+            try {
+                await fetch("/api/clear-chat", { method: "POST" });
+                chatBox.innerHTML = "";
+                if (welcomeHero) {
+                    chatBox.appendChild(welcomeHero);
+                    welcomeHero.style.display = "block";
+                }
+            } catch (err) {
+                console.error("Clear chat failed:", err);
+            }
+        }
+
+        // Attendance Modal Functions
+        function openAttendanceModal() {
+            document.getElementById("attendanceModal").style.display = "flex";
+        }
+
+        function closeAttendanceModal() {
+            document.getElementById("attendanceModal").style.display = "none";
+        }
+
+        function switchAttTab(tab) {
+            const textSec = document.getElementById("attTextSection");
+            const fileSec = document.getElementById("attFileSection");
+            const tabTextBtn = document.getElementById("tabTextBtn");
+            const tabFileBtn = document.getElementById("tabFileBtn");
+
+            if (tab === "text") {
+                textSec.style.display = "block";
+                fileSec.style.display = "none";
+                tabTextBtn.classList.add("active");
+                tabFileBtn.classList.remove("active");
+            } else {
+                textSec.style.display = "none";
+                fileSec.style.display = "block";
+                tabFileBtn.classList.add("active");
+                tabTextBtn.classList.remove("active");
+            }
+        }
+
+        async function submitAttendance() {
+            const resultBox = document.getElementById("attResultBox");
+            resultBox.style.display = "block";
+            resultBox.innerHTML = "Processing attendance calculations...";
+
+            const isText = document.getElementById("tabTextBtn").classList.contains("active");
+
+            try {
+                let response;
+                if (isText) {
+                    const text = document.getElementById("attText").value.trim();
+                    if (!text) {
+                        resultBox.innerHTML = "<span style='color:red;'>Please enter attendance data.</span>";
+                        return;
+                    }
+                    response = await fetch("/api/attendance/extract", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ text })
+                    });
+                } else {
+                    const fileInput = document.getElementById("attFileInput");
+                    if (!fileInput.files.length) {
+                        resultBox.innerHTML = "<span style='color:red;'>Please select a document or image file.</span>";
+                        return;
+                    }
+                    const formData = new FormData();
+                    formData.append("file", fileInput.files[0]);
+
+                    response = await fetch("/api/attendance/extract", {
+                        method: "POST",
+                        body: formData
+                    });
+                }
+
+                const data = await response.json();
+                if (data.success) {
+                    let html = `
+                        <div class="metric-summary">
+                            <div class="metric-pill">
+                                <div class="val" style="color: ${data.overall.overall_percentage >= 75 ? '#10b981' : '#ef4444'}">${data.overall.overall_percentage}%</div>
+                                <div class="lbl">Overall Attendance</div>
+                            </div>
+                            <div class="metric-pill">
+                                <div class="val">${data.overall.total_attended} / ${data.overall.total_conducted}</div>
+                                <div class="lbl">Classes Attended</div>
+                            </div>
+                            <div class="metric-pill">
+                                <div class="val" style="color: ${data.overall.shortage_courses_count > 0 ? '#ef4444' : '#10b981'}">${data.overall.shortage_courses_count}</div>
+                                <div class="lbl">Shortage Courses</div>
+                            </div>
+                        </div>
+                        <div style="font-weight: 600; font-size: 13px; margin-bottom: 6px;">Course Breakdown:</div>
+                    `;
+
+                    data.subjects.forEach(sub => {
+                        const statusClass = sub.is_shortage ? "status-warn" : "status-safe";
+                        let tip = sub.is_shortage 
+                            ? `⚠️ Attend next <strong>${sub.classes_needed_for_75}</strong> class(es) to reach 75%`
+                            : `✅ Can miss up to <strong>${sub.classes_can_miss}</strong> class(es) safely`;
+
+                        html += `
+                            <div class="subject-row">
+                                <div>
+                                    <strong>${sub.subject}</strong>: ${sub.attended}/${sub.total} (${sub.percentage}%)
+                                    <div style="font-size: 11px; color: #64748b; margin-top: 2px;">${tip}</div>
+                                </div>
+                                <span class="status-tag ${statusClass}">${sub.status}</span>
+                            </div>
+                        `;
+                    });
+
+                    html += `<p style="font-size: 11px; color: #94a3b8; margin-top: 10px;">${data.disclaimer}</p>`;
+                    resultBox.innerHTML = html;
+                } else {
+                    resultBox.innerHTML = `<span style="color:red;">❌ ${data.error || 'Failed to extract attendance'}</span>`;
+                }
+            } catch (err) {
+                console.error(err);
+                resultBox.innerHTML = "<span style='color:red;'>An error occurred while analyzing attendance.</span>";
+            }
+        }
+
+        // Enter key to send
+        questionInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                sendQuestion();
+            }
+        });
+    </script>
+</body>
+</html>

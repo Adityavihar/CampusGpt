@@ -1,0 +1,60 @@
+{
+  "documents": {
+    "VITAP_Public_Self_Disclosure.pdf": {
+      "title": "VIT-AP University Public Self Disclosure",
+      "category": "University Overview & Governance",
+      "source_url": "https://vitap.ac.in",
+      "sha256": "b4133687d42ae8b7fa7e1de5e7d025caad5e6fa057c52c6b8af7ea7ba6bf2274",
+      "pages_count": 5,
+      "ocr_pages_count": 0,
+      "chunks_count": 10,
+      "status": "indexed",
+      "last_indexed": "2026-10-28T19:11:32.689719+00:00"
+    },
+    "VITAP_Academic_Regulations_and_FFCS.pdf": {
+      "title": "VIT-AP Academic Regulations & FFCS Guidelines",
+      "category": "Academic Regulations",
+      "source_url": "https://vitap.ac.in/policies",
+      "sha256": "eb5321f3d2bbc6da637fa367237774f994804139500a9e8773654c42b3a2ed71",
+      "pages_count": 3,
+      "ocr_pages_count": 0,
+      "chunks_count": 8,
+      "status": "indexed",
+      "last_indexed": "2026-10-28T19:11:28.624029+00:00"
+    },
+    "VITAP_Programs_and_Admissions_Guide.pdf": {
+      "title": "VIT-AP Programmes & Admissions Guide",
+      "category": "Academic Programs",
+      "source_url": "https://admissions.vitap.ac.in",
+      "sha256": "6b1b62ae468462d3ef1335ffdaa0896a9242e032416185ab4f8b72f644bea7e7",
+      "pages_count": 2,
+      "ocr_pages_count": 0,
+      "chunks_count": 5,
+      "status": "indexed",
+      "last_indexed": "2026-10-28T19:11:31.465411+00:00"
+    },
+    "VITAP_Campus_Facilities_and_Hostels.pdf": {
+      "title": "VIT-AP Campus Facilities & Hostels Guide",
+      "category": "Campus Facilities",
+      "source_url": "https://vitap.ac.in/facilities",
+      "sha256": "89a9daa1656d3538e6c4956be9445435a203aa3083ef9c6914bce9a5cf5d58e1",
+      "pages_count": 2,
+      "ocr_pages_count": 0,
+      "chunks_count": 6,
+      "status": "indexed",
+      "last_indexed": "2026-10-28T19:11:29.577746+00:00"
+    },
+    "VITAP_Fee_Structure_and_Scholarships.pdf": {
+      "title": "VIT-AP Tuition Fees & Scholarships Guide",
+      "category": "Fees & Scholarships",
+      "source_url": "https://vitap.ac.in/fee-structure",
+      "sha256": "c84f45fe49779882e169d75a538884d2fa8b2255ecbd28ba896a28154442be72",
+      "pages_count": 1,
+      "ocr_pages_count": 0,
+      "chunks_count": 3,
+      "status": "indexed",
+      "last_indexed": "2026-10-28T19:11:30.503438+00:00"
+    }
+  },
+  "last_updated": "2026-10-28T19:11:32.689719+00:00"
+}

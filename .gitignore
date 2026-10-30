@@ -1,0 +1,23 @@
+# Python
+venv/
+__pycache__/
+*.py[cod]
+*$py.class
+*.pytest_cache/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Vector Store and local persistent data
+vectorstore/
+data/uploads/
+*.sqlite3
+
+# OS generated
+Thumbs.db
+.DS_Store
