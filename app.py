@@ -707,6 +707,28 @@ def extract_attendance():
 # =========================================================
 
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
+    configured_port = int(os.getenv("PORT", 5001))
     debug_mode = os.getenv("FLASK_DEBUG", "false").lower() in ["1", "true"]
-    app.run(host="0.0.0.0", port=port, debug=debug_mode)
+
+    # Detect if requested port is blocked by Windows exclusions / permissions
+    import socket
+    port_to_use = configured_port
+    candidates = [configured_port, 5001, 8000, 8080] if configured_port not in (5001, 8000, 8080) else [configured_port, 8000, 8080]
+    
+    for candidate in candidates:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+            s.bind(("127.0.0.1", candidate))
+            s.close()
+            port_to_use = candidate
+            break
+        except Exception:
+            continue
+
+    if port_to_use != configured_port:
+        print(f"\n⚠️  Port {configured_port} is restricted by Windows permissions (WinError 10013).")
+        print(f"👉 Automatically switched to available port: http://127.0.0.1:{port_to_use}\n")
+    else:
+        print(f"\n🚀 Starting CampusGPT server on http://127.0.0.1:{port_to_use}\n")
+
+    app.run(host="127.0.0.1", port=port_to_use, debug=debug_mode)
