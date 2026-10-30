@@ -10,11 +10,20 @@ from services.auth import verify_admin_password, get_admin_password
 @pytest.fixture(autouse=True)
 def preserve_catalog():
     import json
-    from services.ingestion_service import CATALOG_PATH, load_catalog, save_catalog
+    from pathlib import Path
+    from services.ingestion_service import CATALOG_PATH, load_catalog, save_catalog, DOCUMENTS_DIR
     original_catalog = load_catalog()
+    existing_files = set(DOCUMENTS_DIR.glob("*"))
     yield
     # Restore original catalog
     save_catalog(original_catalog)
+    # Remove any test files created during test runs
+    for f in DOCUMENTS_DIR.glob("*"):
+        if f not in existing_files:
+            try:
+                f.unlink()
+            except Exception:
+                pass
 
 
 @pytest.fixture
