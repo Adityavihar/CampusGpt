@@ -99,3 +99,51 @@ const document = {
     assert "<script" not in res["caseF"]
     assert "<img" not in res["caseF"]
     assert "<a href=" not in res["caseF"]
+
+    # No [object Object] or undefined in ANY case
+    for k, v in res.items():
+        assert "[object Object]" not in v, f"Found [object Object] in {k}"
+        assert "undefined" not in v, f"Found undefined in {k}"
+
+
+def test_markdown_rendering_with_marked_present():
+    """Verify that when marked + DOMPurify are loaded, no [object Object]undefined is produced."""
+    html_content = INDEX_HTML_PATH.read_text(encoding="utf-8")
+    script_match = re.search(r"<script>([\s\S]*?)<\/script>", html_content)
+    js_code = script_match.group(1)
+
+    node_code = """
+const document = {
+    getElementById: () => ({ value: '', addEventListener: () => {}, style: {}, appendChild: () => {} })
+};
+// Mock marked and DOMPurify
+const marked = {
+    parse: (text) => {
+        // Simple mock of marked GFM output
+        if (text.includes('|')) {
+            return '<table><thead><tr><th>Header</th></tr></thead><tbody><tr><td>Data</td></tr></tbody></table>';
+        }
+        return '<p>' + text + '</p>';
+    }
+};
+const DOMPurify = {
+    sanitize: (html) => html
+};
+""" + js_code + """
+const output = formatMarkdown('| Col 1 | Col 2 |\\n|---|---|\\n| Val 1 | Val 2 |');
+console.log(JSON.stringify({ output: output }));
+"""
+
+    result = subprocess.run(
+        ["node", "-e", node_code],
+        capture_output=True,
+        text=True,
+        check=True
+    )
+    res = json.loads(result.stdout)
+    assert "[object Object]" not in res["output"]
+    assert "undefined" not in res["output"]
+    assert '<table class="chat-table">' in res["output"]
+    assert "<th>Header</th>" in res["output"]
+    assert "<td>Data</td>" in res["output"]
+
