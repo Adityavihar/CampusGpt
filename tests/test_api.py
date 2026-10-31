@@ -61,6 +61,37 @@ def test_chat_successful_turn(mock_generate, mock_retrieve, client):
     assert data["sources"][0]["page"] == 2
 
 
+@patch("app.retrieve_documents")
+@patch("app.generate_answer")
+def test_chat_with_table_and_sources(mock_generate, mock_retrieve, client):
+    mock_retrieve.return_value = {
+        "documents": [["FAT schedule for senior students."]],
+        "metadatas": [[{
+            "doc_id": "VITAP_Academic_Regulations_and_FFCS.pdf",
+            "source": "VITAP_Academic_Regulations_and_FFCS.pdf",
+            "page": 3,
+            "title": "VIT-AP Academic Regulations & FFCS Guidelines"
+        }]],
+        "distances": [[0.05]]
+    }
+    table_text = (
+        "| Student Group | Examination Type | Dates |\n"
+        "|---|---|---|\n"
+        "| Seniors | LAB FAT | Example dates |\n"
+        "| Freshers | Theory FAT | Example dates |"
+    )
+    mock_generate.return_value = table_text
+
+    payload = {"question": "What are the FAT dates?"}
+    response = client.post("/api/chat", json=payload)
+    assert response.status_code == 200
+    data = response.get_json()
+    assert "| Student Group |" in data["answer"]
+    assert len(data["sources"]) == 1
+    assert data["sources"][0]["title"] == "VIT-AP Academic Regulations & FFCS Guidelines"
+    assert data["sources"][0]["page"] == 3
+
+
 def test_clear_chat(client):
     response = client.post("/api/clear-chat")
     assert response.status_code == 200

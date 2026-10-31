@@ -7,6 +7,9 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Markdown Parser & DOM Sanitizer with native offline fallbacks -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
     <style>
         :root {
             --primary: #3b82f6;
@@ -279,10 +282,39 @@
             border-top-left-radius: 4px;
         }
 
-        .message-row.bot .bubble h3, 
-        .message-row.bot .bubble h4 {
+        .message-row.bot .bubble h2 {
+            font-size: 16px;
+            font-weight: 700;
+            margin: 14px 0 6px 0;
+            color: var(--text-main);
+        }
+
+        .message-row.bot .bubble h3 {
+            font-size: 15px;
+            font-weight: 700;
             margin: 12px 0 6px 0;
             color: var(--text-main);
+        }
+
+        .message-row.bot .bubble h4,
+        .message-row.bot .bubble h5 {
+            font-size: 14px;
+            font-weight: 600;
+            margin: 10px 0 4px 0;
+            color: var(--text-main);
+        }
+
+        .message-row.bot .bubble p {
+            margin: 6px 0;
+            line-height: 1.6;
+        }
+
+        .message-row.bot .bubble p:first-child {
+            margin-top: 0;
+        }
+
+        .message-row.bot .bubble p:last-child {
+            margin-bottom: 0;
         }
 
         .message-row.bot .bubble ul, 
@@ -293,6 +325,113 @@
 
         .message-row.bot .bubble li {
             margin-bottom: 4px;
+        }
+
+        /* RESPONSIVE CHAT TABLES */
+        .table-wrapper {
+            width: 100%;
+            margin: 12px 0;
+            overflow-x: auto;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-sm);
+            background: white;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        table.chat-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+            background: white;
+            min-width: 360px;
+        }
+
+        table.chat-table th {
+            background: #f1f5f9;
+            color: #1e293b;
+            font-weight: 700;
+            padding: 10px 14px;
+            border-bottom: 2px solid var(--border);
+            border-right: 1px solid #e2e8f0;
+            white-space: nowrap;
+        }
+
+        table.chat-table th:last-child {
+            border-right: none;
+        }
+
+        table.chat-table td {
+            padding: 9px 14px;
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 1px solid #f1f5f9;
+            color: var(--text-main);
+            vertical-align: top;
+            line-height: 1.5;
+        }
+
+        table.chat-table td:last-child {
+            border-right: none;
+        }
+
+        table.chat-table tr:last-child td {
+            border-bottom: none;
+        }
+
+        table.chat-table tr:nth-child(even) td {
+            background: #f8fafc;
+        }
+
+        table.chat-table tr:hover td {
+            background: #eff6ff;
+        }
+
+        /* CODE & QUOTES */
+        .message-row.bot .bubble pre {
+            background: #0f172a;
+            color: #f8fafc;
+            padding: 12px 14px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 12px;
+            margin: 10px 0;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        .message-row.bot .bubble code {
+            background: #e2e8f0;
+            color: #be123c;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        }
+
+        .message-row.bot .bubble pre code {
+            background: transparent;
+            color: inherit;
+            padding: 0;
+        }
+
+        .message-row.bot .bubble blockquote {
+            border-left: 3px solid var(--primary);
+            margin: 10px 0;
+            padding: 6px 14px;
+            background: #eff6ff;
+            border-radius: 0 6px 6px 0;
+            color: #334155;
+            font-size: 13px;
+        }
+
+        .message-row.bot .bubble a {
+            color: var(--primary);
+            text-decoration: underline;
+            font-weight: 500;
+        }
+
+        .message-row.bot .bubble a:hover {
+            color: var(--primary-dark);
         }
 
 
@@ -737,27 +876,309 @@
         const sendBtn = document.getElementById("sendBtn");
         const welcomeHero = document.getElementById("welcomeHero");
 
-        // Simple Markdown formatter to safely render text
-        function formatMarkdown(text) {
-            if (!text) return "";
-            let html = text
+        // Robust & Safe Markdown Parser Pipeline with GFM Table Support
+        function escapeHtml(text) {
+            return text
                 .replace(/&/g, "&amp;")
                 .replace(/</g, "&lt;")
-                .replace(/>/g, "&gt;");
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#39;");
+        }
+
+        // Preprocess & normalize tables (repairing missing delimiter rows or ragged columns)
+        function preprocessMarkdown(text) {
+            if (!text) return "";
+            const lines = text.replace(/\r\n/g, "\n").split("\n");
+            const processed = [];
+            let i = 0;
+
+            while (i < lines.length) {
+                const line = lines[i];
+                const trimmed = line.trim();
+
+                // Check if line looks like a table row (contains pipes)
+                if (trimmed.includes("|") && trimmed.length > 1) {
+                    const tableLines = [];
+                    while (i < lines.length && lines[i].trim().includes("|") && lines[i].trim().length > 1) {
+                        tableLines.push(lines[i].trim());
+                        i++;
+                    }
+
+                    const repaired = repairTableBlock(tableLines);
+                    if (processed.length > 0 && processed[processed.length - 1] !== "") {
+                        processed.push("");
+                    }
+                    for (const r of repaired) {
+                        processed.push(r);
+                    }
+                    if (i < lines.length && lines[i].trim() !== "") {
+                        processed.push("");
+                    }
+                    continue;
+                } else {
+                    processed.push(line);
+                    i++;
+                }
+            }
+            return processed.join("\n");
+        }
+
+        function repairTableBlock(lines) {
+            if (!lines || lines.length === 0) return [];
+
+            // Ensure leading and trailing pipes
+            const norm = lines.map(l => {
+                let r = l;
+                if (!r.startsWith("|")) r = "| " + r;
+                if (!r.endsWith("|")) r = r + " |";
+                return r;
+            });
+
+            if (norm.length === 1) return norm;
+
+            // Check if row 1 is a delimiter row
+            const delimRegex = /^\s*\|(?:\s*:?-+:?\s*\|)+\s*$/;
+            const hasDelim = delimRegex.test(norm[1]);
+
+            // Find maximum column count
+            let maxCols = 1;
+            for (const row of norm) {
+                const cells = row.slice(1, -1).split("|").map(c => c.trim());
+                if (cells.length > maxCols) maxCols = cells.length;
+            }
+
+            const result = [];
+
+            // Format Header
+            const hCells = norm[0].slice(1, -1).split("|").map(c => c.trim());
+            while (hCells.length < maxCols) hCells.push("");
+            result.push("| " + hCells.join(" | ") + " |");
+
+            let dataStart = 1;
+            if (hasDelim) {
+                const dCells = norm[1].slice(1, -1).split("|").map(c => c.trim());
+                const normDelims = [];
+                for (let col = 0; col < maxCols; col++) {
+                    if (col < dCells.length && /^:?-+:?$/.test(dCells[col])) {
+                        normDelims.push(dCells[col]);
+                    } else {
+                        normDelims.push("---");
+                    }
+                }
+                result.push("| " + normDelims.join(" | ") + " |");
+                dataStart = 2;
+            } else {
+                // Synthesize missing delimiter row
+                const delims = Array(maxCols).fill("---");
+                result.push("| " + delims.join(" | ") + " |");
+                dataStart = 1;
+            }
+
+            // Process data rows
+            for (let r = dataStart; r < norm.length; r++) {
+                const rowStr = norm[r];
+                if (delimRegex.test(rowStr)) continue;
+                const cells = rowStr.slice(1, -1).split("|").map(c => c.trim());
+                while (cells.length < maxCols) cells.push("");
+                result.push("| " + cells.slice(0, maxCols).join(" | ") + " |");
+            }
+
+            return result;
+        }
+
+        function renderTableHtml(lines) {
+            if (lines.length < 2) return lines.join("<br>");
+
+            const headers = lines[0].slice(1, -1).split("|").map(c => c.trim());
+            const delimRow = lines[1].slice(1, -1).split("|").map(c => c.trim());
+
+            // Parse alignment
+            const aligns = delimRow.map(d => {
+                const left = d.startsWith(":");
+                const right = d.endsWith(":");
+                if (left && right) return "center";
+                if (right) return "right";
+                return "left";
+            });
+
+            let ths = headers.map((h, i) => {
+                const align = aligns[i] || "left";
+                return `<th style="text-align: ${align}">${renderInline(h)}</th>`;
+            }).join("");
+
+            let tbodyRows = [];
+            for (let r = 2; r < lines.length; r++) {
+                const row = lines[r];
+                if (!row.trim()) continue;
+                const cells = row.slice(1, -1).split("|").map(c => c.trim());
+                const tds = cells.map((c, i) => {
+                    const align = aligns[i] || "left";
+                    return `<td style="text-align: ${align}">${renderInline(c)}</td>`;
+                }).join("");
+                tbodyRows.push(`<tr>${tds}</tr>`);
+            }
+
+            return `<div class="table-wrapper"><table class="chat-table"><thead><tr>${ths}</tr></thead><tbody>${tbodyRows.join("")}</tbody></table></div>`;
+        }
+
+        function renderInline(text) {
+            if (!text) return "";
+            let s = escapeHtml(text);
 
             // Bold
-            html = html.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
-            // Headings
-            html = html.replace(/^### (.*?)$/gm, "<h4>$1</h4>");
-            html = html.replace(/^## (.*?)$/gm, "<h3>$1</h3>");
-            // Bullet points
-            html = html.replace(/^\s*[-*]\s+(.*?)$/gm, "<li>$1</li>");
-            html = html.replace(/(<li>.*?<\/li>)/gs, "<ul>$1</ul>");
-            // Clean consecutive ULs
-            html = html.replace(/<\/ul>\s*<ul>/g, "");
-            // Paragraph line breaks
-            html = html.replace(/\n\n/g, "<br><br>");
-            return html;
+            s = s.replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>");
+            s = s.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+
+            // Italic
+            s = s.replace(/\*([^*]+)\*/g, "<em>$1</em>");
+            s = s.replace(/_([^_]+)_/g, "<em>$1</em>");
+
+            // Strikethrough
+            s = s.replace(/~~(.*?)~~/g, "<del>$1</del>");
+
+            // Safe Links (only http, https, mailto)
+            s = s.replace(/\[([^\]]+)\]\(((?:https?:\/\/|mailto:)[^)]+)\)/g, (match, label, url) => {
+                return `<a href="${url}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+            });
+
+            return s;
+        }
+
+        // Native resilient markdown renderer
+        function renderMarkdownSafe(rawText) {
+            if (!rawText) return "";
+
+            const text = preprocessMarkdown(rawText);
+
+            // Extract code blocks with tokens
+            const codeBlocks = [];
+            let noCode = text.replace(/```([a-zA-Z0-9_-]*)\n([\s\S]*?)```/g, (match, lang, code) => {
+                const idx = codeBlocks.length;
+                codeBlocks.push(`<pre><code class="language-${escapeHtml(lang)}">${escapeHtml(code.trim())}</code></pre>`);
+                return `%%%CODEBLOCK_${idx}%%%`;
+            });
+
+            // Extract inline code
+            const inlineCodes = [];
+            noCode = noCode.replace(/`([^`\n]+)`/g, (match, code) => {
+                const idx = inlineCodes.length;
+                inlineCodes.push(`<code>${escapeHtml(code)}</code>`);
+                return `%%%INLINECODE_${idx}%%%`;
+            });
+
+            const rawBlocks = noCode.split(/\n{2,}/);
+            const htmlBlocks = [];
+
+            for (let block of rawBlocks) {
+                const trimmed = block.trim();
+                if (!trimmed) continue;
+
+                if (trimmed.startsWith("%%%CODEBLOCK_")) {
+                    htmlBlocks.push(trimmed);
+                    continue;
+                }
+
+                // Table block
+                if (trimmed.includes("|") && trimmed.includes("\n")) {
+                    const tableLines = trimmed.split("\n").filter(l => l.trim().startsWith("|") && l.trim().endsWith("|"));
+                    if (tableLines.length >= 2) {
+                        htmlBlocks.push(renderTableHtml(tableLines));
+                        continue;
+                    }
+                }
+
+                // Headings
+                if (/^#{1,6}\s+/.test(trimmed)) {
+                    const headingHtml = trimmed.split("\n").map(line => {
+                        const hMatch = line.match(/^(#{1,6})\s+(.*)$/);
+                        if (hMatch) {
+                            const level = Math.min(hMatch[1].length + 1, 5);
+                            return `<h${level}>${renderInline(hMatch[2])}</h${level}>`;
+                        }
+                        return renderInline(line);
+                    }).join("");
+                    htmlBlocks.push(headingHtml);
+                    continue;
+                }
+
+                // Blockquote
+                if (trimmed.startsWith("&gt; ") || trimmed.startsWith("> ")) {
+                    const bqText = trimmed.replace(/^(&gt;|>)\s?/gm, "");
+                    htmlBlocks.push(`<blockquote>${renderInline(bqText)}</blockquote>`);
+                    continue;
+                }
+
+                // Mixed list and paragraph handling
+                const lines = trimmed.split("\n");
+                let blockHtml = "";
+                let inUl = false;
+                let inOl = false;
+
+                for (let j = 0; j < lines.length; j++) {
+                    const line = lines[j];
+                    const isBullet = /^\s*[-*]\s+(.*)$/.exec(line);
+                    const isNumber = /^\s*\d+\.\s+(.*)$/.exec(line);
+                    const isH = /^(#{1,6})\s+(.*)$/.exec(line);
+
+                    if (isBullet) {
+                        if (inOl) { blockHtml += "</ol>"; inOl = false; }
+                        if (!inUl) { blockHtml += "<ul>"; inUl = true; }
+                        blockHtml += `<li>${renderInline(isBullet[1])}</li>`;
+                    } else if (isNumber) {
+                        if (inUl) { blockHtml += "</ul>"; inUl = false; }
+                        if (!inOl) { blockHtml += "<ol>"; inOl = true; }
+                        blockHtml += `<li>${renderInline(isNumber[1])}</li>`;
+                    } else if (isH) {
+                        if (inUl) { blockHtml += "</ul>"; inUl = false; }
+                        if (inOl) { blockHtml += "</ol>"; inOl = false; }
+                        const level = Math.min(isH[1].length + 1, 5);
+                        blockHtml += `<h${level}>${renderInline(isH[2])}</h${level}>`;
+                    } else {
+                        if (inUl) { blockHtml += "</ul>"; inUl = false; }
+                        if (inOl) { blockHtml += "</ol>"; inOl = false; }
+                        if (line.trim()) {
+                            blockHtml += `<p>${renderInline(line)}</p>`;
+                        }
+                    }
+                }
+                if (inUl) blockHtml += "</ul>";
+                if (inOl) blockHtml += "</ol>";
+
+                htmlBlocks.push(blockHtml);
+            }
+
+            let finalHtml = htmlBlocks.join("\n");
+            finalHtml = finalHtml.replace(/%%%CODEBLOCK_(\d+)%%%/g, (_, idx) => codeBlocks[idx]);
+            finalHtml = finalHtml.replace(/%%%INLINECODE_(\d+)%%%/g, (_, idx) => inlineCodes[idx]);
+
+            return finalHtml;
+        }
+
+        // Unified rendering entrypoint with marked + DOMPurify when available
+        function formatMarkdown(text) {
+            if (!text) return "";
+
+            const preprocessed = preprocessMarkdown(text);
+
+            if (typeof marked !== "undefined" && typeof DOMPurify !== "undefined") {
+                try {
+                    const renderer = new marked.Renderer();
+                    renderer.table = function(header, body) {
+                        return `<div class="table-wrapper"><table class="chat-table"><thead>${header}</thead><tbody>${body}</tbody></table></div>`;
+                    };
+                    renderer.link = function(href, title, text) {
+                        const safeHref = (href.startsWith("http://") || href.startsWith("https://") || href.startsWith("mailto:")) ? href : "#";
+                        return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${text}</a>`;
+                    };
+                    const rawHtml = marked.parse(preprocessed, { renderer: renderer, gfm: true, breaks: true });
+                    return DOMPurify.sanitize(rawHtml, { ADD_ATTR: ["target", "rel"] });
+                } catch (e) {
+                    console.warn("marked.parse encountered error, falling back to native renderer:", e);
+                }
+            }
+
+            return renderMarkdownSafe(text);
         }
 
         function askPreset(prompt) {

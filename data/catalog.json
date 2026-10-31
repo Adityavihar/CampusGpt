@@ -54,7 +54,27 @@
       "chunks_count": 3,
       "status": "indexed",
       "last_indexed": "2026-10-28T19:11:30.503438+00:00"
+    },
+    "Screenshot_2026-10-31_123725_ef1861d8": {
+      "doc_id": "Screenshot_2026-10-31_123725_ef1861d8",
+      "title": "Fall semester calender",
+      "category": "Academics and Courses",
+      "source_type": "file",
+      "source_url": "https://vitap.ac.in",
+      "original_filename": "Screenshot_2026-10-31_123725.pdf",
+      "publisher": "Office",
+      "publication_date": null,
+      "effective_date": null,
+      "version": "1.0",
+      "sha256": "ef1861d8f196a4c91cae81e0d5d52b557dc2bec69d237d37394bfc8d4999ba57",
+      "pages_count": 1,
+      "ocr_pages_count": 1,
+      "chunks_count": 3,
+      "status": "indexed",
+      "error_message": null,
+      "created_at": "2026-10-31T07:09:51.271563+00:00",
+      "last_indexed": "2026-10-31T07:09:51.271563+00:00"
     }
   },
-  "last_updated": "2026-10-30T18:47:55.380508+00:00"
+  "last_updated": "2026-10-31T07:09:51.271563+00:00"
 }
